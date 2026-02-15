@@ -53,7 +53,7 @@
         #gameOver.show { display: flex; }
         .game-over-title { font-size: 64px; color: #ff0044; text-shadow: 0 0 20px #ff0044; margin-bottom: 30px; }
         .final-score { font-size: 32px; margin-bottom: 40px; text-align: center; line-height: 1.6; }
-        .info-section { max-width: 800px; margin: 40px auto; padding: 20px; background: rgba(0,255,136,0.05); border: 1px solid #00ff88; }
+        .info-section { max-width: 800px; margin: 40px auto; padding: 20px; background: rgba(0,255,136,0.05); border: 1px solid #00ff88; width: calc(100% - 30px); }
         .info-section h2 { margin-bottom: 15px; text-shadow: 0 0 10px #00ff88; }
         .info-section p { line-height: 1.6; opacity: 0.8; }
         .footer { text-align: center; padding: 20px; opacity: 0.5; font-size: 12px; }
@@ -85,12 +85,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #14</div><div>Grade: 81/100</div></div>
+        <div class="hud-right"><div>Iteration #15</div><div>Grade: 82/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v14</div>
+        <div class="subtitle">Self-Improving Game v15</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -115,16 +115,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #14</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #15</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #14 | Grade: 81/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #15 | Grade: 82/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 14 (Enemy Shapes + Lifetime Stats)
+    // NEON SURVIVE — Iteration 15 (Performance/Mobile Audit)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -148,6 +148,33 @@
 
     // Cached vignette
     let cachedVignette = null, vignetteW = 0, vignetteH = 0;
+
+    // Cached CRT scanline overlay
+    let cachedScanlines = null, scanW = 0, scanH = 0;
+    function buildScanlines() {
+        if (scanW === WIDTH && scanH === HEIGHT && cachedScanlines) return;
+        const oc = document.createElement('canvas');
+        oc.width = WIDTH; oc.height = HEIGHT;
+        const octx = oc.getContext('2d');
+        octx.fillStyle = 'rgba(0,0,0,0.03)';
+        for (let y = 0; y < HEIGHT; y += 4) octx.fillRect(0, y, WIDTH, 2);
+        cachedScanlines = oc; scanW = WIDTH; scanH = HEIGHT;
+    }
+
+    // Cached danger border gradients
+    let cachedDanger = { w: 0, h: 0, left: null, right: null, top: null, bottom: null };
+    function buildDangerGradients() {
+        if (cachedDanger.w === WIDTH && cachedDanger.h === HEIGHT) return;
+        const dg = ctx.createLinearGradient(0, 0, 40, 0);
+        dg.addColorStop(0, '#ff0044'); dg.addColorStop(1, 'transparent');
+        const dg2 = ctx.createLinearGradient(WIDTH, 0, WIDTH-40, 0);
+        dg2.addColorStop(0, '#ff0044'); dg2.addColorStop(1, 'transparent');
+        const dg3 = ctx.createLinearGradient(0, 0, 0, 40);
+        dg3.addColorStop(0, '#ff0044'); dg3.addColorStop(1, 'transparent');
+        const dg4 = ctx.createLinearGradient(0, HEIGHT, 0, HEIGHT-40);
+        dg4.addColorStop(0, '#ff0044'); dg4.addColorStop(1, 'transparent');
+        cachedDanger = { w: WIDTH, h: HEIGHT, left: dg, right: dg2, top: dg3, bottom: dg4 };
+    }
 
     // Danger border
     let dangerPulse = 0;
@@ -838,7 +865,7 @@
                         toAdd.push({
                             x: e.x, y: e.y,
                             vx: Math.cos(a) * 150 * difficulty, vy: Math.sin(a) * 150 * difficulty,
-                            type: 'basic', radius: 5, color: '#ff66ff', grazed: false, burstTimer: 0
+                            type: 'basic', radius: 5, color: '#ff66ff', grazed: false, burstTimer: 0, trail: []
                         });
                     }
                     // Burst visual
@@ -879,6 +906,8 @@
     function updateParticles(dt) {
         particles.forEach(p => { p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= 0.98; p.vy *= 0.98; p.life -= p.decay; });
         particles = particles.filter(p => p.life > 0);
+        // Cap particles to prevent memory issues during intense gameplay
+        if (particles.length > 200) particles.splice(0, particles.length - 200);
     }
 
     function updateStars(dt) {
@@ -1055,7 +1084,10 @@
             ctx.globalAlpha = 1;
 
             // Enemies (trails first, then bodies)
+            let enemyIdx = 0;
             enemies.forEach(e => {
+                const useShadow = enemyIdx < 10; // Limit shadowBlur to first 10 enemies for perf
+                enemyIdx++;
                 // Enemy trail
                 e.trail.forEach(t => {
                     if (t.life > 0) {
@@ -1065,7 +1097,8 @@
                     }
                 });
                 ctx.globalAlpha = 1;
-                ctx.shadowBlur = 15; ctx.shadowColor = e.color; ctx.fillStyle = e.color;
+                if (useShadow) { ctx.shadowBlur = 15; ctx.shadowColor = e.color; }
+                ctx.fillStyle = e.color;
                 if (e.type === 'homing') {
                     // Diamond shape for homing
                     ctx.save(); ctx.translate(e.x, e.y);
@@ -1206,22 +1239,15 @@
             });
             ctx.globalAlpha = 1;
 
-            // Danger border — red glow intensifies with enemy count
+            // Danger border — red glow intensifies with enemy count (cached gradients)
             if (enemies.length > 3) {
+                buildDangerGradients();
                 const intensity = Math.min(0.4, (enemies.length - 3) * 0.03) * (0.6 + Math.sin(dangerPulse) * 0.4);
                 ctx.globalAlpha = intensity;
-                const dg = ctx.createLinearGradient(0, 0, 40, 0);
-                dg.addColorStop(0, '#ff0044'); dg.addColorStop(1, 'transparent');
-                ctx.fillStyle = dg; ctx.fillRect(0, 0, 40, HEIGHT);
-                const dg2 = ctx.createLinearGradient(WIDTH, 0, WIDTH-40, 0);
-                dg2.addColorStop(0, '#ff0044'); dg2.addColorStop(1, 'transparent');
-                ctx.fillStyle = dg2; ctx.fillRect(WIDTH-40, 0, 40, HEIGHT);
-                const dg3 = ctx.createLinearGradient(0, 0, 0, 40);
-                dg3.addColorStop(0, '#ff0044'); dg3.addColorStop(1, 'transparent');
-                ctx.fillStyle = dg3; ctx.fillRect(0, 0, WIDTH, 40);
-                const dg4 = ctx.createLinearGradient(0, HEIGHT, 0, HEIGHT-40);
-                dg4.addColorStop(0, '#ff0044'); dg4.addColorStop(1, 'transparent');
-                ctx.fillStyle = dg4; ctx.fillRect(0, HEIGHT-40, WIDTH, 40);
+                ctx.fillStyle = cachedDanger.left; ctx.fillRect(0, 0, 40, HEIGHT);
+                ctx.fillStyle = cachedDanger.right; ctx.fillRect(WIDTH-40, 0, 40, HEIGHT);
+                ctx.fillStyle = cachedDanger.top; ctx.fillRect(0, 0, WIDTH, 40);
+                ctx.fillStyle = cachedDanger.bottom; ctx.fillRect(0, HEIGHT-40, WIDTH, 40);
                 ctx.globalAlpha = 1;
             }
 
@@ -1264,12 +1290,10 @@
             ctx.fillText(killStreakAnnounce, WIDTH/2, HEIGHT/2 + 60); ctx.restore();
         }
 
-        // CRT scanline overlay
+        // CRT scanline overlay (cached offscreen canvas)
         if (isActive) {
-            ctx.fillStyle = 'rgba(0,0,0,0.03)';
-            for (let y = 0; y < HEIGHT; y += 4) {
-                ctx.fillRect(0, y, WIDTH, 2);
-            }
+            buildScanlines();
+            ctx.drawImage(cachedScanlines, 0, 0);
         }
 
         if (shakeAmount > 0) ctx.restore();
