@@ -53,7 +53,8 @@
         #gameOver.show { display: flex; }
         .game-over-title { font-size: 64px; color: #ff0044; text-shadow: 0 0 20px #ff0044; margin-bottom: 30px; }
         .final-score { font-size: 32px; margin-bottom: 40px; text-align: center; line-height: 1.6; }
-        .info-section { max-width: 800px; margin: 40px auto; padding: 20px; background: rgba(0,255,136,0.05); border: 1px solid #00ff88; width: calc(100% - 30px); }
+        .info-section { max-width: 800px; margin: 40px auto; padding: 20px; background: rgba(0,255,136,0.05); border: 1px solid #00ff88; width: calc(100% - 30px); position: relative; z-index: 1; }
+        #menu:not(.hidden) ~ .info-section, #menu:not(.hidden) ~ .footer { display: none; }
         .info-section h2 { margin-bottom: 15px; text-shadow: 0 0 10px #00ff88; }
         .info-section p { line-height: 1.6; opacity: 0.8; }
         .footer { text-align: center; padding: 20px; opacity: 0.5; font-size: 12px; }
@@ -100,12 +101,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #22</div><div>Grade: 87/100</div></div>
+        <div class="hud-right"><div>Iteration #23</div><div>Grade: 88/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v22</div>
+        <div class="subtitle">Self-Improving Game v23</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -130,16 +131,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #22</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #23</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #22 | Grade: 87/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #23 | Grade: 88/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 22 (Score Orbs & Wall Sparks)
+    // NEON SURVIVE — Iteration 23 (Score Orbs & Wall Sparks)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -211,6 +212,15 @@
     let enemies = [], particles = [], stars = [], powerups = [], orbs = [];
     // Score orbs — dropped by killed enemies
     let scoreOrbs = [];
+
+    // Floating text popups (score, combo, etc.)
+    let floatingTexts = [];
+    function spawnFloatingText(x, y, text, color = '#00ff88', size = 18, duration = 1.0) {
+        floatingTexts.push({ x, y, text, color, size, duration, maxDuration: duration, vy: -80 - Math.random() * 30, vx: (Math.random() - 0.5) * 40 });
+    }
+
+    // Game history (last 5 games stored in localStorage)
+    let gameHistory = JSON.parse(localStorage.getItem('neonSurviveHistory') || '[]');
 
     // Input
     let keys = {}, mouse = { x: 0, y: 0, active: false }, touch = { x: 0, y: 0, active: false };
@@ -661,6 +671,7 @@
         waveAnnounce = 'WAVE 1'; waveAnnounceTimer = 1.5;
         document.getElementById('menu').classList.add('hidden');
         document.getElementById('gameOver').classList.remove('show');
+        document.querySelectorAll('.info-section,.footer').forEach(el => el.style.display = 'none');
         document.body.style.overflow = 'hidden';
     }
 
@@ -711,7 +722,15 @@
         const isNewHS = score > (localStorage.getItem('neonSurviveHighScore') || 0);
         const newHSBadge = isNewHS ? '<div style="color:#ffff00;font-size:18px;margin-top:5px;animation:pulse 1s infinite">★ NEW HIGH SCORE ★</div>' : '';
         const grazesPerSec = gameTime > 0 ? (grazeCount / gameTime).toFixed(1) : '0.0';
-        document.getElementById('finalScore').innerHTML = `<div style="font-size:80px;color:${rankInfo.color};text-shadow:0 0 30px ${rankInfo.glow},0 0 60px ${rankInfo.glow};margin-bottom:5px;animation:pulse 1s infinite">${rankInfo.rank}</div>SCORE: ${Math.floor(score)}${newHSBadge}<div style="margin-top:12px;font-size:16px;opacity:0.8;line-height:1.8">Wave ${wave} <span style="color:${tier.color}">[${tier.name}]</span> | ${survivalTime}s<br>${grazeCount} grazes (${grazesPerSec}/s) | ${killCount} kills | Best combo: x${comboBest}</div><div style="margin-top:15px;font-size:13px;opacity:0.55;max-width:400px;line-height:1.5">${tip}</div>`;
+        // Save game to history
+        gameHistory.push({ rank: rankInfo.rank, score: Math.floor(score), wave, time: survivalTime, grazes: grazeCount, kills: killCount, combo: comboBest });
+        if (gameHistory.length > 10) gameHistory = gameHistory.slice(-10);
+        localStorage.setItem('neonSurviveHistory', JSON.stringify(gameHistory));
+        // Build history display (last 5)
+        const historyHtml = gameHistory.length > 1 ? '<div style="margin-top:18px;font-size:12px;opacity:0.45;line-height:1.7">' +
+            'RECENT: ' + gameHistory.slice(-6, -1).reverse().map(h => `<span style="color:${h.rank==='S'||h.rank==='S+'?'#ffff00':h.rank==='A'?'#00ff88':'#aaa'}">${h.rank}</span>`).join(' → ') +
+            '</div>' : '';
+        document.getElementById('finalScore').innerHTML = `<div style="font-size:80px;color:${rankInfo.color};text-shadow:0 0 30px ${rankInfo.glow},0 0 60px ${rankInfo.glow};margin-bottom:5px;animation:pulse 1s infinite">${rankInfo.rank}</div>SCORE: ${Math.floor(score)}${newHSBadge}<div style="margin-top:12px;font-size:16px;opacity:0.8;line-height:1.8">Wave ${wave} <span style="color:${tier.color}">[${tier.name}]</span> | ${survivalTime}s<br>${grazeCount} grazes (${grazesPerSec}/s) | ${killCount} kills | Best combo: x${comboBest}</div>${historyHtml}<div style="margin-top:15px;font-size:13px;opacity:0.55;max-width:400px;line-height:1.5">${tip}</div>`;
         setTimeout(() => document.getElementById('gameOver').classList.add('show'), 800);
     }
 
@@ -1256,11 +1275,13 @@
             ctx.fillRect(0, 0, WIDTH, HEIGHT);
         }
 
-        // Grid
+        // Grid — scrolls with player movement for parallax depth
         if (isActive) {
-            ctx.strokeStyle = 'rgba(0,255,136,0.05)'; ctx.lineWidth = 1;
-            for (let x = 0; x < WIDTH; x += 50) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,HEIGHT); ctx.stroke(); }
-            for (let y = 0; y < HEIGHT; y += 50) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(WIDTH,y); ctx.stroke(); }
+            const gridSize = 50;
+            const gox = (-player.x * 0.15) % gridSize, goy = (-player.y * 0.15) % gridSize;
+            ctx.strokeStyle = 'rgba(0,255,136,0.04)'; ctx.lineWidth = 1;
+            for (let x = gox; x < WIDTH; x += gridSize) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,HEIGHT); ctx.stroke(); }
+            for (let y = goy; y < HEIGHT; y += gridSize) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(WIDTH,y); ctx.stroke(); }
         }
 
         // Stars (parallax layers)
