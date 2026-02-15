@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game</title>
+    <title>NEON SURVIVE — Self-Improving Game v25</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -101,12 +101,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #23</div><div>Grade: 88/100</div></div>
+        <div class="hud-right"><div>Iteration #24</div><div>Grade: 89/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v23</div>
+        <div class="subtitle">Self-Improving Game v24</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -131,19 +131,19 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #23</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #24</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #23 | Grade: 88/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #24 | Grade: 89/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 23 (Score Orbs & Wall Sparks)
+    // NEON SURVIVE — Iteration 25 (Bronze Milestone + Performance Audit)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     let WIDTH, HEIGHT;
     let gameState = 'menu';
     let paused = false;
@@ -245,6 +245,60 @@
 
     // Dash afterimages
     let dashAfterimages = [];
+
+    // Nebula clouds — procedural drifting background patches
+    let nebulae = [];
+    function initNebulae() {
+        const colors = ['rgba(0,100,255,', 'rgba(100,0,200,', 'rgba(0,200,100,', 'rgba(200,50,100,'];
+        for (let i = 0; i < 5; i++) {
+            nebulae.push({
+                x: Math.random() * 2000 - 500, y: Math.random() * 2000 - 500,
+                radius: 150 + Math.random() * 250,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
+                phase: Math.random() * Math.PI * 2
+            });
+        }
+    }
+    function updateNebulae(dt) {
+        nebulae.forEach(n => {
+            n.x += n.vx * dt; n.y += n.vy * dt; n.phase += dt * 0.3;
+            if (n.x < -n.radius * 2) n.x = WIDTH + n.radius;
+            if (n.x > WIDTH + n.radius * 2) n.x = -n.radius;
+            if (n.y < -n.radius * 2) n.y = HEIGHT + n.radius;
+            if (n.y > HEIGHT + n.radius * 2) n.y = -n.radius;
+        });
+    }
+    // Pre-rendered nebula canvases (avoid per-frame createRadialGradient)
+    let nebulaCanvases = [];
+    function buildNebulaCanvases() {
+        nebulaCanvases = nebulae.map(n => {
+            const size = Math.ceil((n.radius + 25) * 2);
+            const oc = document.createElement('canvas');
+            oc.width = size; oc.height = size;
+            const octx = oc.getContext('2d');
+            const cx = size / 2, cy = size / 2;
+            const grad = octx.createRadialGradient(cx, cy, 0, cx, cy, size / 2);
+            grad.addColorStop(0, n.color + '0.03)');
+            grad.addColorStop(0.5, n.color + '0.015)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            octx.fillStyle = grad;
+            octx.fillRect(0, 0, size, size);
+            return oc;
+        });
+    }
+    function renderNebulae() {
+        nebulae.forEach((n, i) => {
+            if (!nebulaCanvases[i]) return;
+            const pulseScale = 1 + Math.sin(n.phase) * 0.08;
+            const alpha = 0.6 + Math.sin(n.phase) * 0.3;
+            ctx.globalAlpha = alpha;
+            const oc = nebulaCanvases[i];
+            const w = oc.width * pulseScale, h = oc.height * pulseScale;
+            ctx.drawImage(oc, n.x - w/2, n.y - h/2, w, h);
+        });
+        ctx.globalAlpha = 1;
+    }
 
     // Attract mode (menu background)
     let attractEnemies = [];
@@ -586,6 +640,7 @@
         for (let i = 0; i < 15; i++) {
             stars.push({ x: Math.random() * WIDTH, y: Math.random() * HEIGHT, size: 2 + Math.random() * 1.5, speed: 0.5 + Math.random() * 0.5, layer: 2 });
         }
+        initNebulae();
         document.getElementById('startBtn').addEventListener('click', startGame);
         document.getElementById('restartBtn').addEventListener('click', startGame);
         window.addEventListener('keydown', e => {
@@ -775,6 +830,7 @@
         if (gameState === 'playing' && !paused) update(dt, timestamp);
         if (gameState === 'dying') updateDying(dt);
         if (gameState === 'menu' || gameState === 'gameover') updateAttractMode(dt);
+        updateNebulae(dt);
         // Update rings always
         rings.forEach(r => { r.radius += r.speed * dt; r.life -= dt / (r.maxRadius / r.speed); });
         rings = rings.filter(r => r.life > 0 && r.radius < r.maxRadius);
@@ -911,6 +967,10 @@
         updateStars(dt);
         checkCollisions();
 
+        // Floating texts update
+        floatingTexts.forEach(ft => { ft.x += ft.vx * dt; ft.y += ft.vy * dt; ft.duration -= dt; });
+        floatingTexts = floatingTexts.filter(ft => ft.duration > 0);
+
         // Edge warnings
         edgeWarnings.forEach(w => w.life -= dt * 2);
         edgeWarnings = edgeWarnings.filter(w => w.life > 0);
@@ -997,8 +1057,8 @@
         player.x = Math.max(player.radius, Math.min(WIDTH - player.radius, player.x));
         player.y = Math.max(player.radius, Math.min(HEIGHT - player.radius, player.y));
         // Wall sparks on edge collision
-        const speed = Math.sqrt(player.vx*player.vx + player.vy*player.vy);
-        if (speed > 80 && (player.x !== oldX || player.y !== oldY)) {
+        const wallSpeed = Math.sqrt(player.vx*player.vx + player.vy*player.vy);
+        if (wallSpeed > 80 && (player.x !== oldX || player.y !== oldY)) {
             const wx = player.x !== oldX ? player.x : player.x;
             const wy = player.y !== oldY ? player.y : player.y;
             for (let i = 0; i < 4; i++) {
@@ -1291,6 +1351,9 @@
             ctx.fillRect(s.x, s.y, s.size, s.size);
         });
 
+        // Nebula clouds
+        renderNebulae();
+
         // Attract mode enemies (menu/gameover background)
         if (gameState === 'menu' || gameState === 'gameover') renderAttractMode();
 
@@ -1558,6 +1621,19 @@
             } else {
                 ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
             }
+        });
+        ctx.globalAlpha = 1;
+
+        // Floating texts
+        floatingTexts.forEach(ft => {
+            const alpha = Math.min(1, ft.duration / (ft.maxDuration * 0.3));
+            ctx.globalAlpha = alpha;
+            ctx.font = `bold ${ft.size}px Courier New`;
+            ctx.textAlign = 'center';
+            ctx.fillStyle = ft.color;
+            ctx.shadowBlur = 10; ctx.shadowColor = ft.color;
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.shadowBlur = 0;
         });
         ctx.globalAlpha = 1;
 

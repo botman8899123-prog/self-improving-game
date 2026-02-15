@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game</title>
+    <title>NEON SURVIVE — Self-Improving Game v25 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -42,7 +42,7 @@
             pointer-events: all;
         }
         .start-btn:hover { background: #00ff88; color: #000; box-shadow: 0 0 20px #00ff88; }
-        .start-btn { touch-action: manipulation; }
+        .start-btn { touch-action: manipulation; min-height: 48px; }
         .controls { margin-top: 30px; font-size: 14px; opacity: 0.6; text-align: center; }
         #gameOver {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -101,12 +101,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #24</div><div>Grade: 89/100</div></div>
+        <div class="hud-right"><div>Iteration #25 🥉</div><div>Grade: 89/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v24</div>
+        <div class="subtitle">Self-Improving Game v25 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -114,6 +114,7 @@
             SPACE / DOUBLE-TAP to DASH<br>
             Dodge enemies. Graze for bonus points. Collect power-ups. Survive.
         </div>
+        <div style="margin-top:15px;font-size:28px;animation:pulse 2s infinite;text-shadow:0 0 20px #cd7f32,0 0 40px #cd7f32;">🥉 BRONZE MILESTONE — 25 Iterations!</div>
         <div id="lifetimeStats" style="margin-top:25px;font-size:12px;opacity:0.5;text-align:center;line-height:1.8;"></div>
     </div>
     <button id="pauseBtn" onclick="togglePause()">❚❚ PAUSE</button>
@@ -131,19 +132,19 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #24</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #25</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #24 | Grade: 89/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #25 🥉 | Grade: 89/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 24 (Score Orbs & Wall Sparks)
+    // NEON SURVIVE — Iteration 25 (Bronze Milestone + Performance Audit)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { alpha: false });
     let WIDTH, HEIGHT;
     let gameState = 'menu';
     let paused = false;
@@ -209,7 +210,7 @@
     let lastTapTime = 0;
 
     // Entities
-    let enemies = [], particles = [], stars = [], powerups = [], orbs = [];
+    let enemies = [], particles = [], stars = [], powerups = [];
     // Score orbs — dropped by killed enemies
     let scoreOrbs = [];
 
@@ -269,17 +270,35 @@
             if (n.y > HEIGHT + n.radius * 2) n.y = -n.radius;
         });
     }
-    function renderNebulae() {
-        nebulae.forEach(n => {
-            const pulseR = n.radius + Math.sin(n.phase) * 20;
-            const grad = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, pulseR);
-            const alpha = 0.025 + Math.sin(n.phase) * 0.01;
-            grad.addColorStop(0, n.color + alpha + ')');
-            grad.addColorStop(0.5, n.color + (alpha * 0.5) + ')');
-            grad.addColorStop(1, 'transparent');
-            ctx.fillStyle = grad;
-            ctx.fillRect(n.x - pulseR, n.y - pulseR, pulseR * 2, pulseR * 2);
+    // Pre-rendered nebula canvases (avoid per-frame createRadialGradient)
+    let nebulaCanvases = [];
+    function buildNebulaCanvases() {
+        nebulaCanvases = nebulae.map(n => {
+            const size = Math.ceil((n.radius + 25) * 2);
+            const oc = document.createElement('canvas');
+            oc.width = size; oc.height = size;
+            const octx = oc.getContext('2d');
+            const cx = size / 2, cy = size / 2;
+            const grad = octx.createRadialGradient(cx, cy, 0, cx, cy, size / 2);
+            grad.addColorStop(0, n.color + '0.03)');
+            grad.addColorStop(0.5, n.color + '0.015)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            octx.fillStyle = grad;
+            octx.fillRect(0, 0, size, size);
+            return oc;
         });
+    }
+    function renderNebulae() {
+        nebulae.forEach((n, i) => {
+            if (!nebulaCanvases[i]) return;
+            const pulseScale = 1 + Math.sin(n.phase) * 0.08;
+            const alpha = 0.6 + Math.sin(n.phase) * 0.3;
+            ctx.globalAlpha = alpha;
+            const oc = nebulaCanvases[i];
+            const w = oc.width * pulseScale, h = oc.height * pulseScale;
+            ctx.drawImage(oc, n.x - w/2, n.y - h/2, w, h);
+        });
+        ctx.globalAlpha = 1;
     }
 
     // Attract mode (menu background)
@@ -945,6 +964,7 @@
             }
         });
         scoreOrbs = scoreOrbs.filter(o => o.life > 0);
+        if (scoreOrbs.length > 50) scoreOrbs.splice(0, scoreOrbs.length - 50);
         updateParticles(dt);
         updateStars(dt);
         checkCollisions();
@@ -952,6 +972,7 @@
         // Floating texts update
         floatingTexts.forEach(ft => { ft.x += ft.vx * dt; ft.y += ft.vy * dt; ft.duration -= dt; });
         floatingTexts = floatingTexts.filter(ft => ft.duration > 0);
+        if (floatingTexts.length > 20) floatingTexts.splice(0, floatingTexts.length - 20);
 
         // Edge warnings
         edgeWarnings.forEach(w => w.life -= dt * 2);
@@ -991,6 +1012,7 @@
         }
         dashAfterimages.forEach(a => a.life -= dt);
         dashAfterimages = dashAfterimages.filter(a => a.life > 0);
+        if (dashAfterimages.length > 15) dashAfterimages.splice(0, dashAfterimages.length - 15);
 
         // Danger border pulse — intensifies with enemy count
         dangerPulse += dt * 3;
