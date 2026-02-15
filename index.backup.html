@@ -100,12 +100,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #20</div><div>Grade: 85/100</div></div>
+        <div class="hud-right"><div>Iteration #21</div><div>Grade: 86/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v20</div>
+        <div class="subtitle">Self-Improving Game v21</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -130,16 +130,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #20</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #21</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #20 | Grade: 85/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #21 | Grade: 86/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 20 (Performance & Mobile Audit)
+    // NEON SURVIVE — Iteration 21 (Death Recap & Difficulty Tiers)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -265,6 +265,26 @@
             ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
         });
         ctx.globalAlpha = 1;
+    }
+
+    // Difficulty tier names
+    function getDifficultyTier(wave) {
+        if (wave <= 2) return { name: 'EASY', color: '#00ff88' };
+        if (wave <= 4) return { name: 'MEDIUM', color: '#00aaff' };
+        if (wave <= 6) return { name: 'HARD', color: '#ffaa00' };
+        if (wave <= 9) return { name: 'INSANE', color: '#ff4400' };
+        return { name: 'NIGHTMARE', color: '#ff0044' };
+    }
+
+    // Death tips based on stats
+    function getDeathTip(wave, grazeCount, comboBest, killCount, gameTime) {
+        if (wave <= 1 && gameTime < 10) return "💡 Tip: Use WASD/mouse to move. Get close to enemies without touching to GRAZE for points!";
+        if (grazeCount < 3 && wave <= 2) return "💡 Tip: Fly close to enemies to graze them — it's risky but earns big points and combos!";
+        if (comboBest < 3 && wave >= 3) return "💡 Tip: Chain grazes within 2s for combo multipliers. The closer the graze, the more dramatic!";
+        if (killCount === 0 && wave >= 2) return "💡 Tip: Dash through enemies (SPACE/double-tap) or use Shield power-ups to destroy them!";
+        if (wave >= 5) return "💡 Tip: Watch for sniper laser sights! Move perpendicular to the beam to dodge.";
+        if (wave >= 3) return "💡 Tip: Purple burst enemies explode into 4 projectiles — keep your distance!";
+        return "💡 Tip: Collect power-ups during wave breaks for an edge in the next wave.";
     }
 
     // Performance rank system
@@ -656,7 +676,12 @@
         if (score > highScore) { highScore = score; localStorage.setItem('neonSurviveHighScore', highScore); }
         const survivalTime = gameTime.toFixed(1);
         const rankInfo = getPerformanceRank(wave, score, grazeCount, comboBest, killCount);
-        document.getElementById('finalScore').innerHTML = `<div style="font-size:80px;color:${rankInfo.color};text-shadow:0 0 30px ${rankInfo.glow},0 0 60px ${rankInfo.glow};margin-bottom:10px;animation:pulse 1s infinite">${rankInfo.rank}</div>SCORE: ${Math.floor(score)}<br><span style="font-size:18px;opacity:0.7">Wave ${wave} | ${survivalTime}s | ${grazeCount} grazes | ${killCount} kills | Best combo: x${comboBest}</span>`;
+        const tier = getDifficultyTier(wave);
+        const tip = getDeathTip(wave, grazeCount, comboBest, killCount, gameTime);
+        const isNewHS = score > (localStorage.getItem('neonSurviveHighScore') || 0);
+        const newHSBadge = isNewHS ? '<div style="color:#ffff00;font-size:18px;margin-top:5px;animation:pulse 1s infinite">★ NEW HIGH SCORE ★</div>' : '';
+        const grazesPerSec = gameTime > 0 ? (grazeCount / gameTime).toFixed(1) : '0.0';
+        document.getElementById('finalScore').innerHTML = `<div style="font-size:80px;color:${rankInfo.color};text-shadow:0 0 30px ${rankInfo.glow},0 0 60px ${rankInfo.glow};margin-bottom:5px;animation:pulse 1s infinite">${rankInfo.rank}</div>SCORE: ${Math.floor(score)}${newHSBadge}<div style="margin-top:12px;font-size:16px;opacity:0.8;line-height:1.8">Wave ${wave} <span style="color:${tier.color}">[${tier.name}]</span> | ${survivalTime}s<br>${grazeCount} grazes (${grazesPerSec}/s) | ${killCount} kills | Best combo: x${comboBest}</div><div style="margin-top:15px;font-size:13px;opacity:0.55;max-width:400px;line-height:1.5">${tip}</div>`;
         setTimeout(() => document.getElementById('gameOver').classList.add('show'), 800);
     }
 
@@ -783,7 +808,8 @@
         }
         const comboMult2 = comboCount > 1 ? ` | x${comboCount} MULT` : '';
         const dashText = dash.cooldown > 0 ? ` | DASH: ${dash.cooldown.toFixed(1)}s` : ' | DASH: ✓';
-        document.getElementById('scoreDisplay').textContent = `WAVE ${wave} | ${Math.floor(score)} pts | GRAZE: ${grazeCount}${comboMult2}${dashText}`;
+        const tier = getDifficultyTier(wave);
+        document.getElementById('scoreDisplay').innerHTML = `WAVE ${wave} <span style="color:${tier.color};font-size:0.8em">[${tier.name}]</span> | ${Math.floor(score)} pts | GRAZE: ${grazeCount}${comboMult2}${dashText}`;
 
         // Power-up HUD
         const pTexts = [];
