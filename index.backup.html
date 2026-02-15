@@ -85,12 +85,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #15</div><div>Grade: 82/100</div></div>
+        <div class="hud-right"><div>Iteration #16</div><div>Grade: 83/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v15</div>
+        <div class="subtitle">Self-Improving Game v16</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -115,16 +115,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #15</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #16</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #15 | Grade: 82/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #16 | Grade: 83/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 15 (Performance/Mobile Audit)
+    // NEON SURVIVE — Iteration 16 (Performance/Mobile Audit)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -206,6 +206,9 @@
     let rings = [];
     // Death slowmo
     let deathSlowmo = 0, deathSlowmoDuration = 1.2;
+
+    // Near-death bullet time
+    let bulletTime = 0, bulletTimeDuration = 0.12;
 
     // Attract mode (menu background)
     let attractEnemies = [];
@@ -663,7 +666,10 @@
     }
 
     function update(dt, timestamp) {
-        const timeMult = activePowerups.slowmo > 0 ? 0.5 : 1;
+        // Bullet time tick
+        if (bulletTime > 0) bulletTime -= dt;
+        const btMult = bulletTime > 0 ? 0.15 : 1;
+        const timeMult = (activePowerups.slowmo > 0 ? 0.5 : 1) * btMult;
         const eDt = dt * timeMult; // Enemy delta time (slowed)
         gameTime += dt;
 
@@ -960,7 +966,21 @@
                 e.grazed = true; grazeCount++; comboCount++; comboTimer = 2;
                 if (comboCount > comboBest) comboBest = comboCount;
                 playGrazeStreakSound(comboCount);
-                flashColor = '#00ffff'; flashAlpha = 0.1 + comboCount * 0.02;
+                // Near-death bullet time — very close grazes trigger micro slow-mo
+                const closeness = dist - (player.radius + e.radius);
+                if (closeness < 8) {
+                    bulletTime = bulletTimeDuration;
+                    flashColor = '#ffffff'; flashAlpha = 0.25;
+                    shakeAmount = Math.max(shakeAmount, 6);
+                    // Extra dramatic particles for near-death
+                    for (let nd = 0; nd < 10; nd++) {
+                        const na = Math.random()*Math.PI*2, ns = Math.random()*200+80;
+                        particles.push({ x: player.x, y: player.y, vx: Math.cos(na)*ns, vy: Math.sin(na)*ns, life: 0.5, decay: 0.03, size: 1+Math.random()*2, color: '#ffffff' });
+                    }
+                    playSound(1400, 0.08, 'sine', 0.12);
+                } else {
+                    flashColor = '#00ffff'; flashAlpha = 0.1 + comboCount * 0.02;
+                }
                 const mx = (player.x+e.x)/2, my = (player.y+e.y)/2;
                 for (let p = 0; p < 6; p++) {
                     const a = Math.random()*Math.PI*2, sp = Math.random()*120+40;
@@ -1218,6 +1238,26 @@
         if (activePowerups.slowmo > 0) {
             ctx.fillStyle = '#ff00ff'; ctx.globalAlpha = 0.06;
             ctx.fillRect(0, 0, WIDTH, HEIGHT); ctx.globalAlpha = 1;
+        }
+
+        // Bullet time tint — white-blue pulse for near-death moments
+        if (bulletTime > 0) {
+            const btIntensity = bulletTime / bulletTimeDuration;
+            ctx.fillStyle = '#aaddff'; ctx.globalAlpha = btIntensity * 0.12;
+            ctx.fillRect(0, 0, WIDTH, HEIGHT); ctx.globalAlpha = 1;
+            // Radial lines from player for dramatic effect
+            if (gameState === 'playing') {
+                ctx.globalAlpha = btIntensity * 0.3;
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1;
+                for (let i = 0; i < 12; i++) {
+                    const a = (Math.PI*2/12)*i + gameTime;
+                    ctx.beginPath();
+                    ctx.moveTo(player.x + Math.cos(a)*30, player.y + Math.sin(a)*30);
+                    ctx.lineTo(player.x + Math.cos(a)*80, player.y + Math.sin(a)*80);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
         }
 
         // Edge warnings

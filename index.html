@@ -85,12 +85,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #16</div><div>Grade: 83/100</div></div>
+        <div class="hud-right"><div>Iteration #17</div><div>Grade: 84/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v16</div>
+        <div class="subtitle">Self-Improving Game v17</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -115,16 +115,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #16</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #17</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #16 | Grade: 83/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #17 | Grade: 84/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 16 (Performance/Mobile Audit)
+    // NEON SURVIVE — Iteration 17 (Wave Break Polish + Combo Glow + Beat Pulse)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -276,6 +276,8 @@
     let wave = 1, waveTimer = 0, waveDuration = 8, waveBreak = false, waveBreakTimer = 0, waveBreakDuration = 2;
     let waveAnnounce = '', waveAnnounceTimer = 0;
     let waveKills = 0, waveGrazes = 0; // per-wave stats
+    let waveBreakStats = null; // {kills, grazes, wave} shown during break
+    let beatPulse = 0; // 0-1 pulse synced to beat timing
 
     // Combo system
     let comboCount = 0, comboTimer = 0, comboBest = 0;
@@ -318,6 +320,7 @@
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+            beatPulse = 1; // Trigger visual pulse on each beat
             beatInterval = setTimeout(scheduleBeat, interval);
         }
         scheduleBeat();
@@ -680,12 +683,14 @@
             if (waveBreakTimer >= waveBreakDuration) {
                 waveBreak = false; waveBreakTimer = 0; waveTimer = 0; wave++;
                 waveAnnounce = `WAVE ${wave}`; waveAnnounceTimer = 1.5;
+                waveKills = 0; waveGrazes = 0; waveBreakStats = null;
                 playSound(600, 0.2, 'square', 0.08);
                 setTimeout(() => playSound(800, 0.2, 'square', 0.08), 100);
                 updateBassDrone(wave);
             }
         } else if (waveTimer >= waveDuration) {
             waveBreak = true; waveBreakTimer = 0;
+            waveBreakStats = { wave, kills: waveKills, grazes: waveGrazes };
             waveAnnounce = 'CLEAR!'; waveAnnounceTimer = 1.5;
             flashColor = '#00ff88'; flashAlpha = 0.3;
             playWaveClearSound();
@@ -709,6 +714,9 @@
         // Kill streak timer
         if (killStreakTimer > 0) { killStreakTimer -= dt; if (killStreakTimer <= 0) killStreak = 0; }
         if (killStreakAnnounceTimer > 0) killStreakAnnounceTimer -= dt;
+
+        // Beat pulse decay
+        if (beatPulse > 0) beatPulse = Math.max(0, beatPulse - dt * 5);
 
         // Dash update
         if (dash.active) { dash.timer -= dt; if (dash.timer <= 0) { dash.active = false; dash.invincible = false; } }
@@ -937,7 +945,7 @@
             if (dist < player.radius + e.radius) {
                 if (dash.invincible || activePowerups.shield > 0) {
                     // Destroy enemy — satisfying explosion
-                    e.life = 0; killCount++;
+                    e.life = 0; killCount++; waveKills++;
                     killStreak++; killStreakTimer = 1.5;
                     if (killStreak === 3) { killStreakAnnounce = 'TRIPLE KILL!'; killStreakAnnounceTimer = 1.2; playSound(1000, 0.15, 'square', 0.1); }
                     else if (killStreak === 5) { killStreakAnnounce = 'RAMPAGE!'; killStreakAnnounceTimer = 1.2; playSound(1200, 0.2, 'square', 0.12); }
@@ -963,7 +971,7 @@
             // Graze
             const grazeDist = player.radius + e.radius + 25;
             if (!e.grazed && dist < grazeDist && dist > player.radius + e.radius) {
-                e.grazed = true; grazeCount++; comboCount++; comboTimer = 2;
+                e.grazed = true; grazeCount++; waveGrazes++; comboCount++; comboTimer = 2;
                 if (comboCount > comboBest) comboBest = comboCount;
                 playGrazeStreakSound(comboCount);
                 // Near-death bullet time — very close grazes trigger micro slow-mo
@@ -1022,6 +1030,12 @@
         ctx.fillRect(0, 0, WIDTH, HEIGHT);
         if (shakeAmount > 0) { ctx.save(); ctx.translate((Math.random()-0.5)*shakeAmount, (Math.random()-0.5)*shakeAmount); }
 
+        // Beat pulse overlay (subtle background throb)
+        if (isActive && beatPulse > 0 && !muted) {
+            ctx.fillStyle = `rgba(0,255,136,${beatPulse * 0.04})`;
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        }
+
         // Grid
         if (isActive) {
             ctx.strokeStyle = 'rgba(0,255,136,0.05)'; ctx.lineWidth = 1;
@@ -1072,8 +1086,10 @@
             ctx.translate(player.x, player.y);
             const angle = Math.atan2(player.vy, player.vx) || 0;
             ctx.rotate(angle);
-            ctx.shadowBlur = 25; ctx.shadowColor = activePowerups.shield > 0 ? '#44ccff' : '#00ff88';
-            ctx.fillStyle = activePowerups.shield > 0 ? '#44ccff' : '#00ff88';
+            const comboGlow = Math.min(comboCount, 10);
+            const playerHue = comboGlow > 5 ? `hsl(${160 - comboGlow * 8}, 100%, 60%)` : (activePowerups.shield > 0 ? '#44ccff' : '#00ff88');
+            ctx.shadowBlur = 25 + comboGlow * 3; ctx.shadowColor = playerHue;
+            ctx.fillStyle = playerHue;
             const r = player.radius;
             ctx.beginPath();
             ctx.moveTo(r * 1.3, 0);
@@ -1319,6 +1335,25 @@
             ctx.font = 'bold 64px Courier New'; ctx.textAlign = 'center';
             ctx.fillStyle = '#00ff88'; ctx.shadowBlur = 30; ctx.shadowColor = '#00ff88';
             ctx.fillText(waveAnnounce, WIDTH/2, HEIGHT/2); ctx.restore();
+        }
+
+        // Wave break stats + countdown bar
+        if (waveBreak && waveBreakStats && gameState === 'playing') {
+            ctx.save();
+            const breakAlpha = Math.min(1, waveBreakTimer * 3); // fade in
+            ctx.globalAlpha = breakAlpha * 0.9;
+            ctx.font = '18px Courier New'; ctx.textAlign = 'center';
+            ctx.fillStyle = '#88ffcc'; ctx.shadowBlur = 10; ctx.shadowColor = '#00ff88';
+            ctx.fillText(`Kills: ${waveBreakStats.kills}  |  Grazes: ${waveBreakStats.grazes}`, WIDTH/2, HEIGHT/2 + 40);
+            // Countdown bar
+            const barW = 200, barH = 4;
+            const pct = waveBreakTimer / waveBreakDuration;
+            ctx.globalAlpha = breakAlpha * 0.6;
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.fillRect(WIDTH/2 - barW/2, HEIGHT/2 + 55, barW, barH);
+            ctx.fillStyle = '#00ff88';
+            ctx.fillRect(WIDTH/2 - barW/2, HEIGHT/2 + 55, barW * pct, barH);
+            ctx.restore();
         }
 
         // Kill streak announcement
