@@ -85,12 +85,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #12</div><div>Grade: 79/100</div></div>
+        <div class="hud-right"><div>Iteration #13</div><div>Grade: 80/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v12</div>
+        <div class="subtitle">Self-Improving Game v13</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -114,16 +114,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #12</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #13</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #12 | Grade: 79/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #13 | Grade: 80/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 12 (Visual Depth + Juice)
+    // NEON SURVIVE — Iteration 13 (Attract Mode + Rank System + Dash Juice)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -174,6 +174,68 @@
     let rings = [];
     // Death slowmo
     let deathSlowmo = 0, deathSlowmoDuration = 1.2;
+
+    // Attract mode (menu background)
+    let attractEnemies = [];
+    function updateAttractMode(dt) {
+        if (Math.random() < dt * 1.5) {
+            const side = Math.floor(Math.random() * 4);
+            let x, y, vx, vy;
+            const sp = 60 + Math.random() * 100;
+            if (side === 0) { x = Math.random() * WIDTH; y = -15; vx = (Math.random()-0.5)*80; vy = sp; }
+            else if (side === 1) { x = WIDTH+15; y = Math.random() * HEIGHT; vx = -sp; vy = (Math.random()-0.5)*80; }
+            else if (side === 2) { x = Math.random() * WIDTH; y = HEIGHT+15; vx = (Math.random()-0.5)*80; vy = -sp; }
+            else { x = -15; y = Math.random() * HEIGHT; vx = sp; vy = (Math.random()-0.5)*80; }
+            const colors = ['#ff0044','#ffaa00','#ff00ff','#00aaff'];
+            attractEnemies.push({ x, y, vx, vy, radius: 5+Math.random()*6, color: colors[Math.floor(Math.random()*4)], trail: [] });
+        }
+        attractEnemies.forEach(e => {
+            e.x += e.vx * dt; e.y += e.vy * dt;
+            e.trail.push({ x: e.x, y: e.y, life: 1 });
+            if (e.trail.length > 6) e.trail.shift();
+            e.trail.forEach(t => t.life -= 0.15);
+        });
+        attractEnemies = attractEnemies.filter(e => e.x > -50 && e.x < WIDTH+50 && e.y > -50 && e.y < HEIGHT+50);
+    }
+    function renderAttractMode() {
+        attractEnemies.forEach(e => {
+            e.trail.forEach(t => {
+                if (t.life > 0) { ctx.globalAlpha = t.life * 0.15; ctx.fillStyle = e.color; ctx.beginPath(); ctx.arc(t.x, t.y, e.radius * t.life * 0.5, 0, Math.PI*2); ctx.fill(); }
+            });
+            ctx.globalAlpha = 0.3; ctx.fillStyle = e.color; ctx.shadowBlur = 10; ctx.shadowColor = e.color;
+            ctx.beginPath(); ctx.arc(e.x, e.y, e.radius, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+        });
+        ctx.globalAlpha = 1;
+    }
+
+    // Performance rank system
+    function getPerformanceRank(wave, score, grazes, comboBest, kills) {
+        let pts = 0;
+        pts += Math.min(40, wave * 5);           // waves survived (max 40)
+        pts += Math.min(25, score / 200);         // score (max 25)
+        pts += Math.min(15, grazes * 1.5);        // grazing skill (max 15)
+        pts += Math.min(10, comboBest * 2);       // combo mastery (max 10)
+        pts += Math.min(10, kills * 1);            // kills (max 10)
+        if (pts >= 90) return { rank: 'S', color: '#ffdd00', glow: '#ffdd00' };
+        if (pts >= 75) return { rank: 'A', color: '#00ff88', glow: '#00ff88' };
+        if (pts >= 55) return { rank: 'B', color: '#00aaff', glow: '#00aaff' };
+        if (pts >= 35) return { rank: 'C', color: '#ffaa00', glow: '#ffaa00' };
+        if (pts >= 20) return { rank: 'D', color: '#ff6600', glow: '#ff6600' };
+        return { rank: 'F', color: '#ff0044', glow: '#ff0044' };
+    }
+
+    // Speed lines during dash
+    let speedLines = [];
+    function spawnSpeedLines() {
+        for (let i = 0; i < 5; i++) {
+            const angle = Math.atan2(player.vy, player.vx) + Math.PI + (Math.random()-0.5)*0.8;
+            speedLines.push({
+                x: player.x + (Math.random()-0.5)*30,
+                y: player.y + (Math.random()-0.5)*30,
+                angle, length: 20 + Math.random()*40, life: 0.2 + Math.random()*0.15, decay: 0.04
+            });
+        }
+    }
 
     // Wave system
     let wave = 1, waveTimer = 0, waveDuration = 8, waveBreak = false, waveBreakTimer = 0, waveBreakDuration = 2;
@@ -430,6 +492,7 @@
         playDashSound();
         shakeAmount = 5;
         flashColor = '#00ff88'; flashAlpha = 0.15;
+        spawnSpeedLines();
         // Dash trail burst
         for (let i = 0; i < 8; i++) {
             const a = Math.random() * Math.PI * 2;
@@ -498,8 +561,8 @@
         flashColor = '#ff0044'; flashAlpha = 0.6;
         if (score > highScore) { highScore = score; localStorage.setItem('neonSurviveHighScore', highScore); }
         const survivalTime = gameTime.toFixed(1);
-        const gradeEmoji = wave >= 5 ? '🔥' : wave >= 3 ? '⚡' : '💀';
-        document.getElementById('finalScore').innerHTML = `SCORE: ${Math.floor(score)}<br><span style="font-size:20px;opacity:0.7">${gradeEmoji} Wave ${wave} | ${survivalTime}s | ${grazeCount} grazes | ${killCount} kills | Best combo: x${comboBest}</span>`;
+        const rankInfo = getPerformanceRank(wave, score, grazeCount, comboBest, killCount);
+        document.getElementById('finalScore').innerHTML = `<div style="font-size:80px;color:${rankInfo.color};text-shadow:0 0 30px ${rankInfo.glow},0 0 60px ${rankInfo.glow};margin-bottom:10px;animation:pulse 1s infinite">${rankInfo.rank}</div>SCORE: ${Math.floor(score)}<br><span style="font-size:18px;opacity:0.7">Wave ${wave} | ${survivalTime}s | ${grazeCount} grazes | ${killCount} kills | Best combo: x${comboBest}</span>`;
         setTimeout(() => document.getElementById('gameOver').classList.add('show'), 800);
     }
 
@@ -543,6 +606,7 @@
 
         if (gameState === 'playing' && !paused) update(dt, timestamp);
         if (gameState === 'dying') updateDying(dt);
+        if (gameState === 'menu' || gameState === 'gameover') updateAttractMode(dt);
         // Update rings always
         rings.forEach(r => { r.radius += r.speed * dt; r.life -= dt / (r.maxRadius / r.speed); });
         rings = rings.filter(r => r.life > 0 && r.radius < r.maxRadius);
@@ -646,6 +710,11 @@
         // Edge warnings
         edgeWarnings.forEach(w => w.life -= dt * 2);
         edgeWarnings = edgeWarnings.filter(w => w.life > 0);
+
+        // Speed lines update
+        speedLines.forEach(l => l.life -= l.decay);
+        speedLines = speedLines.filter(l => l.life > 0);
+        if (dash.active) spawnSpeedLines();
 
         // Danger border pulse — intensifies with enemy count
         dangerPulse += dt * 3;
@@ -896,6 +965,9 @@
             ctx.fillRect(s.x, s.y, s.size, s.size);
         });
 
+        // Attract mode enemies (menu/gameover background)
+        if (gameState === 'menu' || gameState === 'gameover') renderAttractMode();
+
         if (isActive) {
             // Player trail
             player.trail.forEach(t => {
@@ -948,6 +1020,17 @@
             ctx.beginPath(); ctx.arc(-r * 0.5, 0, r * 0.25 + Math.random() * 2, 0, Math.PI*2); ctx.fill();
             ctx.shadowBlur = 0;
             ctx.restore();
+
+            // Speed lines
+            speedLines.forEach(l => {
+                ctx.globalAlpha = l.life * 0.6;
+                ctx.strokeStyle = '#88ffcc'; ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(l.x, l.y);
+                ctx.lineTo(l.x + Math.cos(l.angle)*l.length, l.y + Math.sin(l.angle)*l.length);
+                ctx.stroke();
+            });
+            ctx.globalAlpha = 1;
 
             // Enemies (trails first, then bodies)
             enemies.forEach(e => {

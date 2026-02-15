@@ -85,12 +85,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #11</div><div>Grade: 78/100</div></div>
+        <div class="hud-right"><div>Iteration #12</div><div>Grade: 79/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v11</div>
+        <div class="subtitle">Self-Improving Game v12</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -100,6 +100,7 @@
         </div>
     </div>
     <button id="pauseBtn" onclick="togglePause()">❚❚ PAUSE</button>
+    <button id="muteBtn" onclick="toggleMute()" style="position:fixed;top:20px;right:120px;font-family:'Courier New',monospace;font-size:18px;background:transparent;color:#00ff88;border:1px solid rgba(0,255,136,0.3);padding:5px 10px;cursor:pointer;z-index:50;display:none;opacity:0.5;transition:opacity 0.2s;">🔊</button>
     <div id="pauseOverlay">
         <div class="pause-title">PAUSED</div>
         <button class="start-btn" onclick="togglePause()">RESUME</button>
@@ -113,16 +114,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #11</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #12</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #11 | Grade: 78/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #12 | Grade: 79/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 10 (Visual Depth + Juice)
+    // NEON SURVIVE — Iteration 12 (Visual Depth + Juice)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -190,7 +191,7 @@
     function initAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
 
     function playSound(freq, duration, type = 'sine', volume = 0.1) {
-        if (!audioCtx) return;
+        if (!audioCtx || muted) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = type;
@@ -322,6 +323,49 @@
         if (bassDrone) { try { bassDrone.stop(); } catch(e){} bassDrone = null; bassDroneGain = null; }
     }
 
+    // Arpeggio melody system
+    let arpPlaying = false, arpTimeout = null, arpStep = 0;
+    let muted = localStorage.getItem('neonSurviveMuted') === 'true';
+    const arpScales = [
+        [261, 329, 392, 523, 659], // C major pentatonic
+        [293, 349, 440, 523, 659], // D minor-ish
+        [330, 392, 494, 587, 659], // E phrygian feel
+        [349, 440, 523, 659, 698], // F lydian feel
+    ];
+    function startArp() {
+        if (arpPlaying || muted) return;
+        arpPlaying = true; arpStep = 0;
+        function scheduleArpNote() {
+            if (!arpPlaying || !audioCtx || muted) return;
+            const scaleIdx = Math.min(wave - 1, arpScales.length - 1);
+            const scale = arpScales[scaleIdx];
+            const note = scale[arpStep % scale.length];
+            const octave = Math.floor(arpStep / scale.length) % 2 === 0 ? 1 : 2;
+            const freq = note * octave;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.start(); osc.stop(audioCtx.currentTime + 0.25);
+            arpStep++;
+            const bpm = beatBPM + (wave - 1) * 8;
+            arpTimeout = setTimeout(scheduleArpNote, (60000 / bpm) / 2);
+        }
+        scheduleArpNote();
+    }
+    function stopArp() { arpPlaying = false; if (arpTimeout) clearTimeout(arpTimeout); }
+
+    function toggleMute() {
+        muted = !muted;
+        localStorage.setItem('neonSurviveMuted', muted);
+        document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
+        if (muted) { stopBeat(); stopArp(); stopBassDrone(); if (audioCtx) audioCtx.suspend(); }
+        else if (gameState === 'playing' && !paused) { if (audioCtx) audioCtx.resume(); startBeat(); startArp(); startBassDrone(); }
+    }
+
     // ============================================
     // INIT
     // ============================================
@@ -404,12 +448,15 @@
         if (gameState !== 'playing') return;
         paused = !paused;
         document.getElementById('pauseOverlay').classList.toggle('show', paused);
-        if (paused) { stopBeat(); if (audioCtx) audioCtx.suspend(); }
-        else { startBeat(); if (audioCtx) audioCtx.resume(); }
+        if (paused) { stopBeat(); stopArp(); if (audioCtx) audioCtx.suspend(); }
+        else { if (!muted) { startBeat(); startArp(); if (audioCtx) audioCtx.resume(); } }
     }
 
     function startGame() {
-        initAudio(); startBeat(); startBassDrone();
+        initAudio();
+        if (!muted) { startBeat(); startBassDrone(); startArp(); }
+        document.getElementById('muteBtn').style.display = 'block';
+        document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
         gameState = 'playing'; score = 0; grazeCount = 0; gameTime = 0; difficulty = 1;
         player.x = WIDTH / 2; player.y = HEIGHT / 2; player.vx = 0; player.vy = 0; player.trail = [];
         enemies = []; particles = []; powerups = [];
@@ -440,7 +487,7 @@
     }
 
     function finalizeDeath() {
-        gameState = 'gameover'; stopBeat(); stopBassDrone();
+        gameState = 'gameover'; stopBeat(); stopBassDrone(); stopArp();
         document.getElementById('pauseBtn').style.display = 'none';
         document.body.style.overflow = '';
         // Final explosion burst
@@ -946,6 +993,21 @@
                 const pct = 1 - dash.cooldown / dash.cooldownTime;
                 ctx.strokeStyle = 'rgba(0,255,136,0.3)'; ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 18, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct); ctx.stroke();
+            }
+
+            // Combo timer bar — drains urgently below player
+            if (comboCount > 0 && comboTimer > 0) {
+                const barW = 40 + comboCount * 4, barH = 3;
+                const barX = player.x - barW/2, barY = player.y + player.radius + 22;
+                const pct = comboTimer / 2;
+                const barColor = pct > 0.5 ? '#00ffff' : pct > 0.25 ? '#ffaa00' : '#ff0044';
+                ctx.globalAlpha = 0.7;
+                ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                ctx.fillRect(barX, barY, barW, barH);
+                ctx.fillStyle = barColor;
+                ctx.shadowBlur = 6; ctx.shadowColor = barColor;
+                ctx.fillRect(barX, barY, barW * pct, barH);
+                ctx.shadowBlur = 0; ctx.globalAlpha = 1;
             }
 
             // Combo streak ring — grows and glows with combo count
