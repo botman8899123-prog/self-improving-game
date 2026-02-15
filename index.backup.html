@@ -194,8 +194,8 @@
             <div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div>
         </div>
         <div class="hud-right">
-            <div>Iteration #2</div>
-            <div>Grade: 38/100</div>
+            <div>Iteration #1</div>
+            <div>Grade: --/100</div>
         </div>
     </div>
     
@@ -224,16 +224,12 @@
             visual effects, and gameplay systems.
         </p>
         <p style="margin-top: 10px;">
-            You are playing <strong>Iteration #2</strong>. Check back regularly to see how it transforms itself.
-        </p>
-        <p style="margin-top: 10px;">
-            <a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.
+            You are playing <strong>Iteration #1</strong> — the seed version. Check back regularly to see how it transforms itself.
         </p>
     </div>
     
     <div class="footer">
-        Iteration #2 | Grade: 38/100 | Last Updated: <span id="timestamp"></span>
-        <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
+        Iteration #1 | Grade: --/100 | Last Updated: <span id="timestamp"></span>
     </div>
 
     <script>
@@ -278,25 +274,6 @@
         
         // Screen shake
         let shakeAmount = 0;
-        
-        // Screen flash
-        let flashColor = null;
-        let flashAlpha = 0;
-        
-        // Wave system
-        let wave = 1;
-        let waveTimer = 0;
-        let waveDuration = 8; // seconds per wave
-        let waveBreak = false;
-        let waveBreakTimer = 0;
-        let waveBreakDuration = 2; // breathing room between waves
-        let waveAnnounce = '';
-        let waveAnnounceTimer = 0;
-        
-        // Combo system
-        let comboCount = 0;
-        let comboTimer = 0;
-        let comboBest = 0;
         
         // Audio context
         let audioCtx = null;
@@ -388,15 +365,6 @@
             enemies = [];
             particles = [];
             lastSpawn = 0;
-            wave = 1;
-            waveTimer = 0;
-            waveBreak = false;
-            waveBreakTimer = 0;
-            comboCount = 0;
-            comboTimer = 0;
-            comboBest = 0;
-            waveAnnounce = 'WAVE 1';
-            waveAnnounceTimer = 1.5;
             
             document.getElementById('menu').classList.add('hidden');
             document.getElementById('gameOver').classList.remove('show');
@@ -434,7 +402,7 @@
                 localStorage.setItem('neonSurviveHighScore', highScore);
             }
             
-            document.getElementById('finalScore').innerHTML = `SCORE: ${Math.floor(score)}<br><span style="font-size:20px;opacity:0.7">Wave ${wave} | ${grazeCount} grazes | Best combo: x${comboBest}</span>`;
+            document.getElementById('finalScore').textContent = `SCORE: ${Math.floor(score)} (${grazeCount} grazes)`;
             
             setTimeout(() => {
                 document.getElementById('gameOver').classList.add('show');
@@ -459,48 +427,14 @@
             const dt = 16 / 1000; // Assume 60fps
             gameTime += dt;
             
-            // Wave system
-            waveTimer += dt;
-            if (waveBreak) {
-                waveBreakTimer += dt;
-                if (waveBreakTimer >= waveBreakDuration) {
-                    waveBreak = false;
-                    waveBreakTimer = 0;
-                    waveTimer = 0;
-                    wave++;
-                    waveAnnounce = `WAVE ${wave}`;
-                    waveAnnounceTimer = 1.5;
-                    playSound(600, 0.2, 'square', 0.08);
-                    setTimeout(() => playSound(800, 0.2, 'square', 0.08), 100);
-                }
-            } else if (waveTimer >= waveDuration) {
-                waveBreak = true;
-                waveBreakTimer = 0;
-                waveAnnounce = 'CLEAR!';
-                waveAnnounceTimer = 1.5;
-                flashColor = '#00ff88';
-                flashAlpha = 0.3;
-                playSound(1000, 0.3, 'sine', 0.1);
-            }
+            // Update difficulty
+            difficulty = 1 + gameTime * 0.05;
+            spawnInterval = Math.max(300, 1000 - gameTime * 20);
             
-            if (waveAnnounceTimer > 0) waveAnnounceTimer -= dt;
-            
-            // Update difficulty based on wave
-            difficulty = 1 + (wave - 1) * 0.3 + gameTime * 0.02;
-            spawnInterval = waveBreak ? 99999 : Math.max(250, 900 - wave * 60);
-            
-            // Combo timer decay
-            if (comboTimer > 0) {
-                comboTimer -= dt;
-                if (comboTimer <= 0) { comboCount = 0; }
-            }
-            
-            // Update score — combo multiplier!
-            const comboMult = Math.max(1, comboCount);
-            score = gameTime * 10 + grazeCount * 50 * comboMult;
-            const comboText = comboCount > 1 ? ` | COMBO: x${comboCount}` : '';
+            // Update score
+            score = gameTime * 10 + grazeCount * 50;
             document.getElementById('scoreDisplay').textContent = 
-                `WAVE ${wave} | TIME: ${gameTime.toFixed(1)}s | GRAZE: ${grazeCount}${comboText}`;
+                `TIME: ${gameTime.toFixed(1)}s | GRAZE: ${grazeCount}`;
             
             // Update player
             updatePlayer(dt);
@@ -685,45 +619,23 @@
                 }
                 
                 // Graze
-                const grazeDistance = player.radius + e.radius + 25;
+                const grazeDistance = player.radius + e.radius + 20;
                 if (!e.grazed && dist < grazeDistance && dist > player.radius + e.radius) {
                     e.grazed = true;
                     grazeCount++;
-                    comboCount++;
-                    comboTimer = 2; // 2s to chain next graze
-                    if (comboCount > comboBest) comboBest = comboCount;
                     
-                    // Graze sound — pitch rises with combo!
-                    const pitch = 600 + comboCount * 100;
-                    playSound(Math.min(pitch, 2000), 0.12, 'sine', 0.08);
+                    // Graze sound
+                    playSound(800, 0.1, 'sine', 0.05);
                     
-                    // Screen flash
-                    flashColor = '#00ffff';
-                    flashAlpha = 0.1 + comboCount * 0.02;
-                    
-                    // Graze particles — burst of sparkles
-                    const midX = (player.x + e.x) / 2;
-                    const midY = (player.y + e.y) / 2;
-                    for (let p = 0; p < 6; p++) {
-                        const a = Math.random() * Math.PI * 2;
-                        const sp = Math.random() * 120 + 40;
-                        particles.push({
-                            x: midX, y: midY,
-                            vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-                            life: 0.6, decay: 0.025,
-                            size: Math.random() * 3 + 1,
-                            color: comboCount > 3 ? '#ffff00' : '#00ffff'
-                        });
-                    }
-                    
-                    // Floating score text particle
+                    // Graze particle
                     particles.push({
-                        x: midX, y: midY - 10,
-                        vx: 0, vy: -80,
-                        life: 0.8, decay: 0.025,
-                        size: 0, // text particle (size 0 = text)
-                        color: comboCount > 3 ? '#ffff00' : '#00ffff',
-                        text: comboCount > 1 ? `x${comboCount}` : '+50'
+                        x: e.x,
+                        y: e.y,
+                        vx: 0, vy: -50,
+                        life: 0.5,
+                        decay: 0.02,
+                        size: 3,
+                        color: '#00ffff'
                     });
                 }
             });
@@ -825,40 +737,9 @@
             particles.forEach(p => {
                 ctx.globalAlpha = p.life;
                 ctx.fillStyle = p.color;
-                if (p.text) {
-                    ctx.font = 'bold 16px Courier New';
-                    ctx.textAlign = 'center';
-                    ctx.shadowBlur = 8;
-                    ctx.shadowColor = p.color;
-                    ctx.fillText(p.text, p.x, p.y);
-                    ctx.shadowBlur = 0;
-                } else {
-                    ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
-                }
+                ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
             });
             ctx.globalAlpha = 1;
-            
-            // Screen flash
-            if (flashAlpha > 0) {
-                ctx.fillStyle = flashColor || '#fff';
-                ctx.globalAlpha = flashAlpha;
-                ctx.fillRect(0, 0, WIDTH, HEIGHT);
-                ctx.globalAlpha = 1;
-                flashAlpha -= 0.015;
-            }
-            
-            // Wave announcement
-            if (waveAnnounceTimer > 0 && gameState === 'playing') {
-                ctx.save();
-                ctx.globalAlpha = Math.min(1, waveAnnounceTimer);
-                ctx.font = 'bold 64px Courier New';
-                ctx.textAlign = 'center';
-                ctx.fillStyle = '#00ff88';
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = '#00ff88';
-                ctx.fillText(waveAnnounce, WIDTH / 2, HEIGHT / 2);
-                ctx.restore();
-            }
             
             if (shakeAmount > 0) {
                 ctx.restore();
