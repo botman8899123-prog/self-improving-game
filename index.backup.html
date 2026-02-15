@@ -100,12 +100,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #21</div><div>Grade: 86/100</div></div>
+        <div class="hud-right"><div>Iteration #22</div><div>Grade: 87/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v21</div>
+        <div class="subtitle">Self-Improving Game v22</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -130,16 +130,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #21</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #22</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #21 | Grade: 86/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #22 | Grade: 87/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 21 (Death Recap & Difficulty Tiers)
+    // NEON SURVIVE — Iteration 22 (Score Orbs & Wall Sparks)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -209,6 +209,8 @@
 
     // Entities
     let enemies = [], particles = [], stars = [], powerups = [], orbs = [];
+    // Score orbs — dropped by killed enemies
+    let scoreOrbs = [];
 
     // Input
     let keys = {}, mouse = { x: 0, y: 0, active: false }, touch = { x: 0, y: 0, active: false };
@@ -451,6 +453,34 @@
         osc.start(); osc.stop(audioCtx.currentTime + 0.2);
     }
 
+    // Wall spark sound
+    function playWallSparkSound() {
+        if (!audioCtx || muted) return;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.06);
+        g.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+    }
+
+    // Orb collect sound — short sparkle
+    function playOrbCollectSound() {
+        if (!audioCtx || muted) return;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(900 + Math.random() * 400, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1800, audioCtx.currentTime + 0.06);
+        g.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
+
     // Wave clear fanfare
     function playWaveClearSound() {
         if (!audioCtx) return;
@@ -620,7 +650,7 @@
         document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
         gameState = 'playing'; score = 0; grazeCount = 0; gameTime = 0; difficulty = 1;
         player.x = WIDTH / 2; player.y = HEIGHT / 2; player.vx = 0; player.vy = 0; player.trail = [];
-        enemies = []; particles = []; powerups = [];
+        enemies = []; particles = []; powerups = []; scoreOrbs = [];
         lastSpawn = 0; lastPowerupSpawn = 0;
         wave = 1; waveTimer = 0; waveBreak = false; waveBreakTimer = 0;
         comboCount = 0; comboTimer = 0; comboBest = 0; killCount = 0; killStreak = 0; killStreakTimer = 0;
@@ -831,6 +861,33 @@
 
         updateEnemies(eDt);
         updatePowerups(dt);
+        // Score orbs update
+        scoreOrbs.forEach(o => {
+            o.vx *= 0.96; o.vy *= 0.96;
+            o.x += o.vx * dt; o.y += o.vy * dt;
+            o.life -= dt; o.pulse += dt * 4;
+            // Magnet toward player when close or magnet active
+            const odx = player.x - o.x, ody = player.y - o.y;
+            const odist = Math.sqrt(odx*odx + ody*ody);
+            const magnetRange = activePowerups.magnet > 0 ? 300 : 80;
+            if (odist < magnetRange && odist > 5) {
+                const pull = activePowerups.magnet > 0 ? 350 : 150;
+                o.vx += (odx/odist) * pull * dt;
+                o.vy += (ody/odist) * pull * dt;
+            }
+            // Collection
+            if (odist < player.radius + o.radius + 8) {
+                score += o.value;
+                o.life = 0;
+                playOrbCollectSound();
+                particles.push({ x: o.x, y: o.y - 8, vx: 0, vy: -50, life: 0.6, decay: 0.03, size: 0, color: '#ffdd00', text: `+${o.value}` });
+                for (let si = 0; si < 3; si++) {
+                    const sa = Math.random() * Math.PI * 2;
+                    particles.push({ x: o.x, y: o.y, vx: Math.cos(sa)*60, vy: Math.sin(sa)*60, life: 0.3, decay: 0.04, size: 2, color: '#ffdd00' });
+                }
+            }
+        });
+        scoreOrbs = scoreOrbs.filter(o => o.life > 0);
         updateParticles(dt);
         updateStars(dt);
         checkCollisions();
@@ -917,8 +974,22 @@
 
         player.x += player.vx * dt;
         player.y += player.vy * dt;
+        const oldX = player.x, oldY = player.y;
         player.x = Math.max(player.radius, Math.min(WIDTH - player.radius, player.x));
         player.y = Math.max(player.radius, Math.min(HEIGHT - player.radius, player.y));
+        // Wall sparks on edge collision
+        const speed = Math.sqrt(player.vx*player.vx + player.vy*player.vy);
+        if (speed > 80 && (player.x !== oldX || player.y !== oldY)) {
+            const wx = player.x !== oldX ? player.x : player.x;
+            const wy = player.y !== oldY ? player.y : player.y;
+            for (let i = 0; i < 4; i++) {
+                const a = Math.random() * Math.PI * 2;
+                const sp = 60 + Math.random() * 100;
+                particles.push({ x: wx, y: wy, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 0.3, decay: 0.04, size: 1.5, color: '#00ff88' });
+            }
+            shakeAmount = Math.max(shakeAmount, 2);
+            playWallSparkSound();
+        }
 
         player.trail.push({ x: player.x, y: player.y, life: 1 });
         if (player.trail.length > (dash.active ? 25 : 15)) player.trail.shift();
@@ -1102,6 +1173,13 @@
                     playSound(500, 0.1, 'square', 0.12);
                     setTimeout(() => playSound(700, 0.08, 'sine', 0.08), 50);
                     score += 100;
+                    // Spawn score orbs from killed enemy
+                    const orbCount = 2 + Math.floor(Math.random() * 2);
+                    for (let oi = 0; oi < orbCount; oi++) {
+                        const oa = Math.random() * Math.PI * 2;
+                        const ospd = 40 + Math.random() * 80;
+                        scoreOrbs.push({ x: e.x, y: e.y, vx: Math.cos(oa)*ospd, vy: Math.sin(oa)*ospd, life: 4, value: 25, radius: 4, pulse: Math.random() * Math.PI * 2 });
+                    }
                 } else {
                     endGame();
                 }
@@ -1390,6 +1468,19 @@
                 ctx.font = '16px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
                 ctx.fillStyle = '#fff';
                 ctx.fillText(p.symbol, p.x, p.y);
+                ctx.shadowBlur = 0;
+            });
+            ctx.globalAlpha = 1;
+
+            // Score orbs
+            scoreOrbs.forEach(o => {
+                const glow = 0.5 + Math.sin(o.pulse) * 0.3;
+                ctx.globalAlpha = Math.min(1, o.life) * glow;
+                ctx.fillStyle = '#ffdd00';
+                ctx.shadowBlur = 10; ctx.shadowColor = '#ffdd00';
+                ctx.beginPath(); ctx.arc(o.x, o.y, o.radius + Math.sin(o.pulse) * 1.5, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.beginPath(); ctx.arc(o.x, o.y, o.radius * 0.4, 0, Math.PI*2); ctx.fill();
                 ctx.shadowBlur = 0;
             });
             ctx.globalAlpha = 1;
