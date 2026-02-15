@@ -66,12 +66,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #4</div><div>Grade: 52/100</div></div>
+        <div class="hud-right"><div>Iteration #5</div><div>Grade: 65/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v4</div>
+        <div class="subtitle">Self-Improving Game v5</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -88,16 +88,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #4</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #5</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #4 | Grade: 52/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #5 | Grade: 65/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 4
+    // NEON SURVIVE — Iteration 5 (Performance/Mobile Audit)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -111,6 +111,12 @@
 
     // Ambient beat
     let beatInterval = null, beatOsc = null, beatGain = null;
+
+    // Cached vignette
+    let cachedVignette = null, vignetteW = 0, vignetteH = 0;
+
+    // Mobile detection
+    const isMobile = /Android|iPhone|iPad|iPod|webOS/i.test(navigator.userAgent) || window.innerWidth < 768;
 
     // Player
     let player = { x: 0, y: 0, vx: 0, vy: 0, radius: 12, trail: [] };
@@ -233,6 +239,8 @@
         });
         canvas.addEventListener('touchmove', handleTouch);
         canvas.addEventListener('touchend', () => touch.active = false);
+        // Prevent scroll during gameplay
+        document.body.addEventListener('touchmove', e => { if (gameState === 'playing') e.preventDefault(); }, { passive: false });
         document.getElementById('highScoreDisplay').textContent = `HIGH SCORE: ${Math.floor(highScore)}`;
         document.getElementById('timestamp').textContent = new Date().toLocaleString();
         requestAnimationFrame(gameLoop);
@@ -575,14 +583,15 @@
         });
         enemies = enemies.filter(e => e.life !== 0);
 
-        // Power-up collisions
-        powerups.forEach((p, i) => {
+        // Power-up collisions (iterate backwards for safe splice)
+        for (let i = powerups.length - 1; i >= 0; i--) {
+            const p = powerups[i];
             const dx = player.x - p.x, dy = player.y - p.y;
             if (Math.sqrt(dx*dx + dy*dy) < player.radius + p.radius) {
                 collectPowerup(p);
                 powerups.splice(i, 1);
             }
-        });
+        }
     }
 
     // ============================================
@@ -737,11 +746,14 @@
             });
             ctx.globalAlpha = 1;
 
-            // Vignette
-            const vg = ctx.createRadialGradient(WIDTH/2, HEIGHT/2, HEIGHT*0.3, WIDTH/2, HEIGHT/2, HEIGHT*0.8);
-            vg.addColorStop(0, 'transparent');
-            vg.addColorStop(1, 'rgba(0,0,0,0.5)');
-            ctx.fillStyle = vg;
+            // Vignette (cached)
+            if (!cachedVignette || vignetteW !== WIDTH || vignetteH !== HEIGHT) {
+                cachedVignette = ctx.createRadialGradient(WIDTH/2, HEIGHT/2, HEIGHT*0.3, WIDTH/2, HEIGHT/2, HEIGHT*0.8);
+                cachedVignette.addColorStop(0, 'transparent');
+                cachedVignette.addColorStop(1, 'rgba(0,0,0,0.5)');
+                vignetteW = WIDTH; vignetteH = HEIGHT;
+            }
+            ctx.fillStyle = cachedVignette;
             ctx.fillRect(0, 0, WIDTH, HEIGHT);
         }
 
