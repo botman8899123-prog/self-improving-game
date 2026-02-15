@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>NEON SURVIVE — Self-Improving Game</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -12,6 +13,7 @@
             color: #00ff88;
             overflow-x: hidden;
             -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none; user-select: none;
         }
         #gameCanvas { display: block; background: #000; cursor: none; touch-action: none; }
         .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
@@ -40,6 +42,7 @@
             pointer-events: all;
         }
         .start-btn:hover { background: #00ff88; color: #000; box-shadow: 0 0 20px #00ff88; }
+        .start-btn { touch-action: manipulation; }
         .controls { margin-top: 30px; font-size: 14px; opacity: 0.6; text-align: center; }
         #gameOver {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -87,7 +90,7 @@
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v9</div>
+        <div class="subtitle">Self-Improving Game v10</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -110,16 +113,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #9</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #10</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #9 | Grade: 76/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #10 | Grade: 76/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 9 (Visual Depth + Juice)
+    // NEON SURVIVE — Iteration 10 (Visual Depth + Juice)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -417,6 +420,7 @@
         waveAnnounce = 'WAVE 1'; waveAnnounceTimer = 1.5;
         document.getElementById('menu').classList.add('hidden');
         document.getElementById('gameOver').classList.remove('show');
+        document.body.style.overflow = 'hidden';
     }
 
     function endGame() {
@@ -435,6 +439,7 @@
     function finalizeDeath() {
         gameState = 'gameover'; stopBeat(); stopBassDrone();
         document.getElementById('pauseBtn').style.display = 'none';
+        document.body.style.overflow = '';
         // Final explosion burst
         for (let i = 0; i < 40; i++) {
             const a = Math.random() * Math.PI * 2, sp = Math.random() * 200 + 80;

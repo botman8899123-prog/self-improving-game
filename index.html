@@ -85,12 +85,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #9</div><div>Grade: 76/100</div></div>
+        <div class="hud-right"><div>Iteration #11</div><div>Grade: 78/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v10</div>
+        <div class="subtitle">Self-Improving Game v11</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -113,11 +113,11 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #10</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #11</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #10 | Grade: 76/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #11 | Grade: 78/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
@@ -167,6 +167,8 @@
 
     // Effects
     let shakeAmount = 0, flashColor = null, flashAlpha = 0;
+    // Kill streak
+    let killStreak = 0, killStreakTimer = 0, killStreakAnnounce = '', killStreakAnnounceTimer = 0;
     // Ring explosions (wave clear, death)
     let rings = [];
     // Death slowmo
@@ -412,7 +414,7 @@
         enemies = []; particles = []; powerups = [];
         lastSpawn = 0; lastPowerupSpawn = 0;
         wave = 1; waveTimer = 0; waveBreak = false; waveBreakTimer = 0;
-        comboCount = 0; comboTimer = 0; comboBest = 0; killCount = 0;
+        comboCount = 0; comboTimer = 0; comboBest = 0; killCount = 0; killStreak = 0; killStreakTimer = 0;
         paused = false; newHighScore = false; document.getElementById('pauseOverlay').classList.remove('show');
         document.getElementById('pauseBtn').style.display = 'block';
         dash.active = false; dash.timer = 0; dash.cooldown = 0; dash.invincible = false;
@@ -537,6 +539,9 @@
 
         // Combo timer
         if (comboTimer > 0) { comboTimer -= dt; if (comboTimer <= 0) comboCount = 0; }
+        // Kill streak timer
+        if (killStreakTimer > 0) { killStreakTimer -= dt; if (killStreakTimer <= 0) killStreak = 0; }
+        if (killStreakAnnounceTimer > 0) killStreakAnnounceTimer -= dt;
 
         // Dash update
         if (dash.active) { dash.timer -= dt; if (dash.timer <= 0) { dash.active = false; dash.invincible = false; } }
@@ -759,6 +764,10 @@
                 if (dash.invincible || activePowerups.shield > 0) {
                     // Destroy enemy — satisfying explosion
                     e.life = 0; killCount++;
+                    killStreak++; killStreakTimer = 1.5;
+                    if (killStreak === 3) { killStreakAnnounce = 'TRIPLE KILL!'; killStreakAnnounceTimer = 1.2; playSound(1000, 0.15, 'square', 0.1); }
+                    else if (killStreak === 5) { killStreakAnnounce = 'RAMPAGE!'; killStreakAnnounceTimer = 1.2; playSound(1200, 0.2, 'square', 0.12); }
+                    else if (killStreak >= 8) { killStreakAnnounce = 'UNSTOPPABLE!'; killStreakAnnounceTimer = 1.5; playSound(1500, 0.25, 'square', 0.15); }
                     shakeAmount = 10;
                     // Ring burst
                     for (let i = 0; i < 16; i++) {
@@ -1049,6 +1058,23 @@
             ctx.font = 'bold 64px Courier New'; ctx.textAlign = 'center';
             ctx.fillStyle = '#00ff88'; ctx.shadowBlur = 30; ctx.shadowColor = '#00ff88';
             ctx.fillText(waveAnnounce, WIDTH/2, HEIGHT/2); ctx.restore();
+        }
+
+        // Kill streak announcement
+        if (killStreakAnnounceTimer > 0 && gameState === 'playing') {
+            ctx.save(); ctx.globalAlpha = Math.min(1, killStreakAnnounceTimer);
+            const scale = 1 + (1 - Math.min(1, killStreakAnnounceTimer)) * 0.3;
+            ctx.font = `bold ${Math.floor(36 * scale)}px Courier New`; ctx.textAlign = 'center';
+            ctx.fillStyle = '#ff8800'; ctx.shadowBlur = 20; ctx.shadowColor = '#ff8800';
+            ctx.fillText(killStreakAnnounce, WIDTH/2, HEIGHT/2 + 60); ctx.restore();
+        }
+
+        // CRT scanline overlay
+        if (isActive) {
+            ctx.fillStyle = 'rgba(0,0,0,0.03)';
+            for (let y = 0; y < HEIGHT; y += 4) {
+                ctx.fillRect(0, y, WIDTH, 2);
+            }
         }
 
         if (shakeAmount > 0) ctx.restore();
