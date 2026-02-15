@@ -82,12 +82,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #8</div><div>Grade: 74/100</div></div>
+        <div class="hud-right"><div>Iteration #9</div><div>Grade: 76/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v8</div>
+        <div class="subtitle">Self-Improving Game v9</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -110,16 +110,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #8</strong>. Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #9</strong>. Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #8 | Grade: 74/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #9 | Grade: 76/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 8 (Visual Depth + Juice)
+    // NEON SURVIVE — Iteration 9 (Visual Depth + Juice)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
@@ -164,6 +164,10 @@
 
     // Effects
     let shakeAmount = 0, flashColor = null, flashAlpha = 0;
+    // Ring explosions (wave clear, death)
+    let rings = [];
+    // Death slowmo
+    let deathSlowmo = 0, deathSlowmoDuration = 1.2;
 
     // Wave system
     let wave = 1, waveTimer = 0, waveDuration = 8, waveBreak = false, waveBreakTimer = 0, waveBreakDuration = 2;
@@ -416,17 +420,32 @@
     }
 
     function endGame() {
-        gameState = 'gameover'; stopBeat();
-        document.getElementById('pauseBtn').style.display = 'none';
-        shakeAmount = 20;
-        for (let i = 0; i < 50; i++) {
-            const a = Math.random() * Math.PI * 2, sp = Math.random() * 8 + 2;
-            particles.push({ x: player.x, y: player.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 1, decay: 0.015, size: Math.random()*4+2, color: Math.random()>0.5?'#ff0044':'#ff8800' });
+        gameState = 'dying'; deathSlowmo = deathSlowmoDuration;
+        shakeAmount = 25;
+        // Death ring
+        rings.push({ x: player.x, y: player.y, radius: 5, maxRadius: Math.max(WIDTH, HEIGHT) * 0.8, speed: 300, life: 1, color: '#ff0044', width: 4 });
+        // Initial burst
+        for (let i = 0; i < 30; i++) {
+            const a = Math.random() * Math.PI * 2, sp = Math.random() * 300 + 50;
+            particles.push({ x: player.x, y: player.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 1.5, decay: 0.012, size: Math.random()*5+2, color: Math.random()>0.5?'#ff0044':'#ff8800' });
         }
-        playDeathSound(); stopBassDrone();
+        playDeathSound();
+    }
+
+    function finalizeDeath() {
+        gameState = 'gameover'; stopBeat(); stopBassDrone();
+        document.getElementById('pauseBtn').style.display = 'none';
+        // Final explosion burst
+        for (let i = 0; i < 40; i++) {
+            const a = Math.random() * Math.PI * 2, sp = Math.random() * 200 + 80;
+            particles.push({ x: player.x, y: player.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 1, decay: 0.02, size: Math.random()*4+1, color: Math.random()>0.3?'#ff0044':'#ffffff' });
+        }
+        flashColor = '#ff0044'; flashAlpha = 0.6;
         if (score > highScore) { highScore = score; localStorage.setItem('neonSurviveHighScore', highScore); }
-        document.getElementById('finalScore').innerHTML = `SCORE: ${Math.floor(score)}<br><span style="font-size:20px;opacity:0.7">Wave ${wave} | ${grazeCount} grazes | ${killCount} kills | Best combo: x${comboBest}</span>`;
-        setTimeout(() => document.getElementById('gameOver').classList.add('show'), 1000);
+        const survivalTime = gameTime.toFixed(1);
+        const gradeEmoji = wave >= 5 ? '🔥' : wave >= 3 ? '⚡' : '💀';
+        document.getElementById('finalScore').innerHTML = `SCORE: ${Math.floor(score)}<br><span style="font-size:20px;opacity:0.7">${gradeEmoji} Wave ${wave} | ${survivalTime}s | ${grazeCount} grazes | ${killCount} kills | Best combo: x${comboBest}</span>`;
+        setTimeout(() => document.getElementById('gameOver').classList.add('show'), 800);
     }
 
     // ============================================
@@ -468,6 +487,10 @@
         const dt = Math.min(rawDt, 1/30); // Cap dt to prevent physics jumps
 
         if (gameState === 'playing' && !paused) update(dt, timestamp);
+        if (gameState === 'dying') updateDying(dt);
+        // Update rings always
+        rings.forEach(r => { r.radius += r.speed * dt; r.life -= dt / (r.maxRadius / r.speed); });
+        rings = rings.filter(r => r.life > 0 && r.radius < r.maxRadius);
         render();
     }
 
@@ -492,6 +515,9 @@
             waveAnnounce = 'CLEAR!'; waveAnnounceTimer = 1.5;
             flashColor = '#00ff88'; flashAlpha = 0.3;
             playWaveClearSound();
+            // Expanding ring VFX
+            rings.push({ x: player.x, y: player.y, radius: 20, maxRadius: Math.max(WIDTH, HEIGHT) * 0.6, speed: 600, life: 1, color: '#00ff88', width: 3 });
+            rings.push({ x: player.x, y: player.y, radius: 10, maxRadius: Math.max(WIDTH, HEIGHT) * 0.4, speed: 450, life: 1, color: '#00ffcc', width: 2 });
             // Spawn bonus orb during wave break
             powerups.push({
                 x: WIDTH/2 + (Math.random()-0.5)*200, y: HEIGHT/2 + (Math.random()-0.5)*200,
@@ -567,6 +593,19 @@
         dangerPulse += dt * 3;
 
         if (shakeAmount > 0) { shakeAmount *= 0.9; if (shakeAmount < 0.1) shakeAmount = 0; }
+    }
+
+    function updateDying(dt) {
+        deathSlowmo -= dt;
+        const slowFactor = 0.05 + 0.15 * (1 - deathSlowmo / deathSlowmoDuration);
+        // Still update particles slowly for dramatic effect
+        particles.forEach(p => { p.x += p.vx * dt * slowFactor; p.y += p.vy * dt * slowFactor; p.life -= p.decay * slowFactor; });
+        particles = particles.filter(p => p.life > 0);
+        // Enemies slow to crawl
+        enemies.forEach(e => { e.x += e.vx * dt * slowFactor; e.y += e.vy * dt * slowFactor; });
+        updateStars(dt * slowFactor);
+        if (shakeAmount > 0) { shakeAmount *= 0.95; if (shakeAmount < 0.1) shakeAmount = 0; }
+        if (deathSlowmo <= 0) finalizeDeath();
     }
 
     function updatePlayer(dt) {
@@ -766,10 +805,12 @@
     // ============================================
     function render() {
         // Dynamic background — shifts hue with wave
-        if (gameState === 'playing' && !paused) {
-            const waveHue = ((wave - 1) * 30) % 360;
+        const isActive = (gameState === 'playing' || gameState === 'dying') && !paused;
+        if (isActive) {
+            const waveHue = gameState === 'dying' ? 0 : ((wave - 1) * 30) % 360;
+            const sat = gameState === 'dying' ? '60%' : '40%';
             const grad = ctx.createRadialGradient(WIDTH/2, HEIGHT/2, 0, WIDTH/2, HEIGHT/2, HEIGHT * 0.9);
-            grad.addColorStop(0, `hsla(${waveHue}, 40%, 4%, 1)`);
+            grad.addColorStop(0, `hsla(${waveHue}, ${sat}, 4%, 1)`);
             grad.addColorStop(0.5, `hsla(${waveHue + 20}, 50%, 2%, 1)`);
             grad.addColorStop(1, '#000');
             ctx.fillStyle = grad;
@@ -780,7 +821,7 @@
         if (shakeAmount > 0) { ctx.save(); ctx.translate((Math.random()-0.5)*shakeAmount, (Math.random()-0.5)*shakeAmount); }
 
         // Grid
-        if (gameState === 'playing') {
+        if (isActive) {
             ctx.strokeStyle = 'rgba(0,255,136,0.05)'; ctx.lineWidth = 1;
             for (let x = 0; x < WIDTH; x += 50) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,HEIGHT); ctx.stroke(); }
             for (let y = 0; y < HEIGHT; y += 50) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(WIDTH,y); ctx.stroke(); }
@@ -793,7 +834,7 @@
             ctx.fillRect(s.x, s.y, s.size, s.size);
         });
 
-        if (gameState === 'playing') {
+        if (isActive) {
             // Player trail
             player.trail.forEach(t => {
                 if (t.life > 0) {
@@ -938,7 +979,7 @@
         }
 
         // Edge warnings
-        if (gameState === 'playing') {
+        if (isActive) {
             edgeWarnings.forEach(w => {
                 // Clamp to screen edge
                 let wx = Math.max(30, Math.min(WIDTH - 30, w.x));
@@ -985,6 +1026,17 @@
             ctx.fillStyle = cachedVignette;
             ctx.fillRect(0, 0, WIDTH, HEIGHT);
         }
+
+        // Expanding rings
+        rings.forEach(r => {
+            ctx.globalAlpha = r.life * 0.7;
+            ctx.strokeStyle = r.color;
+            ctx.lineWidth = r.width * r.life;
+            ctx.shadowBlur = 15; ctx.shadowColor = r.color;
+            ctx.beginPath(); ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = 0;
+        });
+        ctx.globalAlpha = 1;
 
         // Wave announcement
         if (waveAnnounceTimer > 0 && gameState === 'playing') {
