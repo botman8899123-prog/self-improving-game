@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v33 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v35 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -127,12 +127,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #33 🥉</div><div>Grade: 95/100</div></div>
+        <div class="hud-right"><div>Iteration #35 🥉</div><div>Grade: 93/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v33 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v35 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -142,7 +142,8 @@
         </div>
         <button class="start-btn" style="margin-top:12px;font-size:16px;padding:8px 20px;opacity:0.7" onclick="openSettings()">⚙ SETTINGS</button>
         <div style="margin-top:15px;font-size:28px;animation:pulse 2s infinite;text-shadow:0 0 20px #cd7f32,0 0 40px #cd7f32;">🥉 BRONZE MILESTONE — 25 Iterations!</div>
-        <div id="lifetimeStats" style="margin-top:25px;font-size:12px;opacity:0.5;text-align:center;line-height:1.8;"></div>
+        <div id="pilotRank" style="margin-top:20px;font-size:14px;text-align:center;line-height:1.6;"></div>
+        <div id="lifetimeStats" style="margin-top:10px;font-size:12px;opacity:0.5;text-align:center;line-height:1.8;"></div>
     </div>
     <button id="pauseBtn" onclick="togglePause()">❚❚ PAUSE</button>
     <button id="muteBtn" onclick="toggleMute()" style="position:fixed;top:20px;right:120px;font-family:'Courier New',monospace;font-size:18px;background:transparent;color:#00ff88;border:1px solid rgba(0,255,136,0.3);padding:5px 10px;cursor:pointer;z-index:50;display:none;opacity:0.5;transition:opacity 0.2s;">🔊</button>
@@ -169,16 +170,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #33</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #35</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #33 🥉 | Grade: 95/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #35 🥉 | Grade: 93/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 33 (Visual Polish + Aura System)
+    // NEON SURVIVE — Iteration 35 (Edge Awareness + Rank Reveal + Wave Bar)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d', { alpha: false });
@@ -344,6 +345,43 @@
 
     // Proximity heartbeat
     let proximityBeatTimer = 0, lastProximityBeat = 0;
+
+    // Death shards — triangle fragments that spin away
+    let deathShards = [];
+
+    // Wave freeze — brief pause on wave clear for impact
+    let waveFreezeTimer = 0;
+
+    // Persistent XP/Level system
+    let xpData = JSON.parse(localStorage.getItem('neonSurviveXP') || '{"xp":0,"level":1,"totalXP":0}');
+    function xpForLevel(lvl) { return Math.floor(80 * Math.pow(1.4, lvl - 1)); }
+    function addXP(amount) {
+        xpData.xp += amount; xpData.totalXP += amount;
+        while (xpData.xp >= xpForLevel(xpData.level)) {
+            xpData.xp -= xpForLevel(xpData.level);
+            xpData.level++;
+            levelUpPending = true;
+        }
+        localStorage.setItem('neonSurviveXP', JSON.stringify(xpData));
+    }
+    let levelUpPending = false;
+    // Ship colors unlocked by level
+    function getShipColor(level) {
+        if (level >= 20) return '#ff00ff'; // magenta
+        if (level >= 15) return '#ffdd00'; // gold
+        if (level >= 10) return '#ff8800'; // orange
+        if (level >= 7) return '#00ffff';  // cyan
+        if (level >= 4) return '#88ff00';  // lime
+        return '#00ff88'; // default green
+    }
+    function getShipName(level) {
+        if (level >= 20) return 'VOID PHANTOM';
+        if (level >= 15) return 'GOLDEN ACE';
+        if (level >= 10) return 'SOLAR FLARE';
+        if (level >= 7) return 'ICE RUNNER';
+        if (level >= 4) return 'LIME STREAK';
+        return 'NEON PILOT';
+    }
 
     // Dash afterimages
     let dashAfterimages = [];
@@ -860,18 +898,57 @@
         shakeAmount = 25;
         // Death ring
         rings.push({ x: player.x, y: player.y, radius: 5, maxRadius: Math.max(WIDTH, HEIGHT) * 0.8, speed: 300, life: 1, color: '#ff0044', width: 4 });
-        // Initial burst
-        for (let i = 0; i < 30; i++) {
+        // Death shards — triangle fragments spinning away
+        deathShards = [];
+        const shipCol = getShipColor(xpData.level);
+        const r = player.radius;
+        const baseAngle = Math.atan2(player.vy, player.vx) || 0;
+        // Break triangle into 6 shards (triangular fragments)
+        const shardPoints = [
+            [r*1.3, 0], [-r*0.8, -r*0.9], [-r*0.4, 0], [-r*0.8, r*0.9]
+        ];
+        for (let i = 0; i < 6; i++) {
+            const a = baseAngle + (Math.PI * 2 / 6) * i + (Math.random()-0.5)*0.5;
+            const sp = 120 + Math.random() * 250;
+            deathShards.push({
+                x: player.x, y: player.y,
+                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                rotation: baseAngle + Math.random() * Math.PI,
+                rotSpeed: (Math.random()-0.5) * 15,
+                size: r * (0.3 + Math.random() * 0.5),
+                life: 1.8, decay: 0.012,
+                color: Math.random() > 0.3 ? shipCol : '#ff0044'
+            });
+        }
+        // Smaller particle burst (reduced since shards carry the visual weight)
+        for (let i = 0; i < 18; i++) {
             const a = Math.random() * Math.PI * 2, sp = Math.random() * 300 + 50;
             particles.push({ x: player.x, y: player.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 1.5, decay: 0.012, size: Math.random()*5+2, color: Math.random()>0.5?'#ff0044':'#ff8800' });
         }
         playDeathSound();
+        // Award XP for this run
+        const xpEarned = Math.floor(score * 0.1 + wave * 20 + grazeCount * 5);
+        addXP(xpEarned);
     }
 
     function updateLifetimeDisplay() {
         const el = document.getElementById('lifetimeStats');
         if (el && lifetime.games > 0) {
             el.innerHTML = `GAMES: ${lifetime.games} | BEST WAVE: ${lifetime.bestWave} | KILLS: ${lifetime.totalKills} | GRAZES: ${lifetime.totalGrazes} | BEST COMBO: x${lifetime.bestCombo}`;
+        }
+        // Pilot rank/XP display
+        const prEl = document.getElementById('pilotRank');
+        if (prEl) {
+            const shipCol = getShipColor(xpData.level);
+            const shipName = getShipName(xpData.level);
+            const needed = xpForLevel(xpData.level);
+            const pct = Math.floor((xpData.xp / needed) * 100);
+            const barW = 140;
+            const filledW = Math.floor(barW * (xpData.xp / needed));
+            prEl.innerHTML = `<span style="color:${shipCol};text-shadow:0 0 10px ${shipCol}">▶ ${shipName}</span> <span style="opacity:0.6">LVL ${xpData.level}</span><br>` +
+                `<span style="display:inline-block;width:${barW}px;height:6px;background:rgba(255,255,255,0.1);border-radius:3px;vertical-align:middle;overflow:hidden">` +
+                `<span style="display:block;width:${filledW}px;height:100%;background:${shipCol};border-radius:3px;box-shadow:0 0 6px ${shipCol}"></span></span>` +
+                `<span style="font-size:11px;opacity:0.5;margin-left:6px">${xpData.xp}/${needed} XP</span>`;
         }
     }
 
@@ -925,12 +1002,25 @@
                 `<div style="width:0%;height:100%;background:${s.color};border-radius:3px;box-shadow:0 0 6px ${s.color};transition:width 0.8s cubic-bezier(.17,.67,.35,1.2) ${0.3 + i * 0.15}s" data-stat-bar="${pct}"></div></div>` +
                 `<span style="width:30px;font-size:11px;opacity:0.7">${s.value}</span></div>`;
         }).join('');
-        document.getElementById('finalScore').innerHTML = `<div style="font-size:80px;color:${rankInfo.color};text-shadow:0 0 30px ${rankInfo.glow},0 0 60px ${rankInfo.glow};margin-bottom:5px;animation:pulse 1s infinite">${rankInfo.rank}</div>SCORE: ${Math.floor(score)}${newHSBadge}<div style="margin-top:12px;font-size:16px;opacity:0.8;line-height:1.8">Wave ${wave} <span style="color:${tier.color}">[${tier.name}]</span> | ${survivalTime}s<br>${grazesPerSec} grazes/s | Best combo: x${comboBest}</div><div style="margin-top:14px;max-width:280px;width:100%">${barsHtml}</div>${historyHtml}<div style="margin-top:15px;font-size:13px;opacity:0.55;max-width:400px;line-height:1.5">${tip}</div>`;
+        document.getElementById('finalScore').innerHTML = `<div id="rankReveal" style="font-size:80px;color:${rankInfo.color};text-shadow:0 0 30px ${rankInfo.glow},0 0 60px ${rankInfo.glow};margin-bottom:5px;opacity:0;transform:scale(3);transition:opacity 0.4s,transform 0.5s cubic-bezier(.17,.67,.35,1.2)">${rankInfo.rank}</div>SCORE: ${Math.floor(score)}${newHSBadge}<div style="margin-top:12px;font-size:16px;opacity:0.8;line-height:1.8">Wave ${wave} <span style="color:${tier.color}">[${tier.name}]</span> | ${survivalTime}s<br>${grazesPerSec} grazes/s | Best combo: x${comboBest}</div><div style="margin-top:14px;max-width:280px;width:100%">${barsHtml}</div>${historyHtml}<div style="margin-top:15px;font-size:13px;opacity:0.55;max-width:400px;line-height:1.5">${tip}</div>`;
         // Trigger bar animations after DOM paint
         requestAnimationFrame(() => { requestAnimationFrame(() => {
             document.querySelectorAll('[data-stat-bar]').forEach(el => { el.style.width = el.dataset.statBar + '%'; });
         }); });
-        setTimeout(() => document.getElementById('gameOver').classList.add('show'), 800);
+        setTimeout(() => {
+            document.getElementById('gameOver').classList.add('show');
+            // Dramatic rank reveal with delay
+            setTimeout(() => {
+                const rr = document.getElementById('rankReveal');
+                if (rr) { rr.style.opacity = '1'; rr.style.transform = 'scale(1)'; }
+                // Rank reveal sound
+                if (!muted && audioCtx) {
+                    const rankFreqs = { 'S': [880,1100,1320,1760], 'A': [660,880,1100], 'B': [523,659,784], 'C': [440,523], 'D': [330,440], 'F': [220] };
+                    const freqs = rankFreqs[rankInfo.rank] || [440];
+                    freqs.forEach((f, i) => setTimeout(() => playSound(f, 0.25, 'sine', 0.1), i * 80));
+                }
+            }, 400);
+        }, 800);
     }
 
     // ============================================
@@ -973,7 +1063,9 @@
 
         // Hit freeze — skip update for juicy pause on graze
         if (hitFreezeTimer > 0) { hitFreezeTimer -= rawDt; }
-        if (gameState === 'playing' && !paused && hitFreezeTimer <= 0) update(dt, timestamp);
+        // Wave freeze — brief pause on wave clear
+        if (waveFreezeTimer > 0) { waveFreezeTimer -= rawDt; }
+        if (gameState === 'playing' && !paused && hitFreezeTimer <= 0 && waveFreezeTimer <= 0) update(dt, timestamp);
         if (gameState === 'dying') updateDying(dt);
         if (gameState === 'menu' || gameState === 'gameover') updateAttractMode(dt);
         updateNebulae(dt);
@@ -1021,6 +1113,7 @@
             }
         } else if (waveTimer >= waveDuration) {
             waveBreak = true; waveBreakTimer = 0;
+            waveFreezeTimer = 0.15; // brief freeze for impact
             waveBreakStats = { wave, kills: waveKills, grazes: waveGrazes };
             // Perfect wave bonus — 5+ grazes in a wave
             const isPerfectWave = waveGrazes >= 5;
@@ -1293,6 +1386,15 @@
         // Still update particles slowly for dramatic effect
         particles.forEach(p => { p.x += p.vx * dt * slowFactor; p.y += p.vy * dt * slowFactor; p.life -= p.decay * slowFactor; });
         particles = particles.filter(p => p.life > 0);
+        // Death shards — spin and drift
+        deathShards.forEach(s => {
+            s.x += s.vx * dt * slowFactor;
+            s.y += s.vy * dt * slowFactor;
+            s.rotation += s.rotSpeed * dt * slowFactor;
+            s.life -= s.decay * slowFactor;
+            s.vx *= 0.995; s.vy *= 0.995;
+        });
+        deathShards = deathShards.filter(s => s.life > 0);
         // Enemies slow to crawl
         enemies.forEach(e => { e.x += e.vx * dt * slowFactor; e.y += e.vy * dt * slowFactor; });
         updateStars(dt * slowFactor);
@@ -1706,13 +1808,30 @@
                 ctx.shadowBlur = 0; ctx.globalAlpha = 1;
             }
 
+            // Edge proximity warning — player glows warm when near walls
+            const edgeMargin = 60;
+            const edgeProxL = Math.max(0, 1 - player.x / edgeMargin);
+            const edgeProxR = Math.max(0, 1 - (WIDTH - player.x) / edgeMargin);
+            const edgeProxT = Math.max(0, 1 - player.y / edgeMargin);
+            const edgeProxB = Math.max(0, 1 - (HEIGHT - player.y) / edgeMargin);
+            const edgeProx = Math.max(edgeProxL, edgeProxR, edgeProxT, edgeProxB);
+            if (edgeProx > 0) {
+                const epAlpha = edgeProx * 0.35 * (0.6 + 0.4 * Math.sin(gameTime * 8));
+                ctx.globalAlpha = epAlpha;
+                ctx.fillStyle = '#ff4400';
+                ctx.shadowBlur = 30; ctx.shadowColor = '#ff4400';
+                ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 15 + edgeProx * 10, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            }
+
             // Player (rotating triangle)
             ctx.save();
             ctx.translate(player.x, player.y);
             const angle = Math.atan2(player.vy, player.vx) || 0;
             ctx.rotate(angle);
             const comboGlow = Math.min(comboCount, 10);
-            const playerHue = comboGlow > 5 ? `hsl(${160 - comboGlow * 8}, 100%, 60%)` : (activePowerups.shield > 0 ? '#44ccff' : '#00ff88');
+            const baseShipColor = getShipColor(xpData.level);
+            const playerHue = comboGlow > 5 ? `hsl(${160 - comboGlow * 8}, 100%, 60%)` : (activePowerups.shield > 0 ? '#44ccff' : baseShipColor);
             ctx.shadowBlur = 25 + comboGlow * 3; ctx.shadowColor = playerHue;
             ctx.fillStyle = playerHue;
             const r = player.radius;
@@ -1967,6 +2086,25 @@
         });
         ctx.globalAlpha = 1;
 
+        // Death shards — spinning triangle fragments
+        deathShards.forEach(s => {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, s.life * 1.5);
+            ctx.translate(s.x, s.y);
+            ctx.rotate(s.rotation);
+            ctx.fillStyle = s.color;
+            ctx.shadowBlur = 12; ctx.shadowColor = s.color;
+            ctx.beginPath();
+            ctx.moveTo(s.size, 0);
+            ctx.lineTo(-s.size * 0.6, -s.size * 0.7);
+            ctx.lineTo(-s.size * 0.6, s.size * 0.7);
+            ctx.closePath();
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        });
+        ctx.globalAlpha = 1;
+
         // Floating texts
         floatingTexts.forEach(ft => {
             const alpha = Math.min(1, ft.duration / (ft.maxDuration * 0.3));
@@ -2178,23 +2316,37 @@
             ctx.restore();
         }
 
-        // Wave progress bar — thin bar at top of screen
+        // Wave progress bar — enhanced bar at top of screen
         if (isActive && !waveBreak) {
-            const barY = 2, barH = 3;
+            const barY = 1, barH = 5;
             const pct = Math.min(1, waveTimer / waveDuration);
             const tier = getDifficultyTier(wave);
             // Background track
-            ctx.fillStyle = 'rgba(255,255,255,0.06)';
+            ctx.fillStyle = 'rgba(255,255,255,0.08)';
             ctx.fillRect(0, barY, WIDTH, barH);
+            // Half and three-quarter tick marks
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.fillRect(WIDTH * 0.5 - 1, barY, 2, barH);
+            ctx.fillRect(WIDTH * 0.75 - 1, barY, 2, barH);
+            ctx.fillRect(WIDTH * 0.25 - 1, barY, 2, barH);
             // Progress fill with tier color
             ctx.fillStyle = tier.color;
-            ctx.globalAlpha = 0.5 + Math.sin(gameTime * 3) * 0.1;
+            ctx.globalAlpha = 0.6 + Math.sin(gameTime * 3) * 0.1;
             ctx.fillRect(0, barY, WIDTH * pct, barH);
-            // Glow at leading edge
+            // Bright leading edge with glow
             if (pct > 0.01) {
-                ctx.shadowBlur = 8; ctx.shadowColor = tier.color;
-                ctx.fillRect(WIDTH * pct - 4, barY, 4, barH);
+                ctx.shadowBlur = 12; ctx.shadowColor = tier.color;
+                ctx.fillStyle = '#ffffff';
+                ctx.globalAlpha = 0.8;
+                ctx.fillRect(WIDTH * pct - 6, barY, 6, barH);
                 ctx.shadowBlur = 0;
+            }
+            // Pulsing warning when wave almost done (>80%)
+            if (pct > 0.8) {
+                const urgency = (pct - 0.8) / 0.2;
+                ctx.globalAlpha = urgency * 0.3 * (0.5 + 0.5 * Math.sin(gameTime * 10));
+                ctx.fillStyle = tier.color;
+                ctx.fillRect(0, barY, WIDTH, barH);
             }
             ctx.globalAlpha = 1;
         }
