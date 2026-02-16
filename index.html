@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v36 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v37 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -127,12 +127,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #36 🥉</div><div>Grade: 94/100</div></div>
+        <div class="hud-right"><div>Iteration #37 🥉</div><div>Grade: 95/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v36 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v37 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -170,16 +170,16 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #36</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #37</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #36 🥉 | Grade: 94/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #37 🥉 | Grade: 95/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 35 (Edge Awareness + Rank Reveal + Wave Bar)
+    // NEON SURVIVE — Iteration 37 (Edge Awareness + Rank Reveal + Wave Bar)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d', { alpha: false });
@@ -277,6 +277,7 @@
 
     // Dash
     let dash = { active: false, timer: 0, cooldown: 0, duration: 0.15, cooldownTime: 1.2, speed: 1200, invincible: false };
+    let dashReadyFlash = 0; // visual flash when dash becomes available
     let lastTapTime = 0;
 
     // Entities
@@ -1110,6 +1111,29 @@
                 updateBassDrone(wave);
                 // Boss every 5 waves
                 if (wave % 5 === 0 && !boss) { setTimeout(() => { if (gameState === 'playing') spawnBoss(wave); }, 1500); }
+                // Wave milestone rewards — every 3 waves, grant a brief power boost
+                if (wave > 1 && (wave - 1) % 3 === 0) {
+                    const rewards = [
+                        { name: '⚡ SURGE', desc: 'Speed boost!', effect: () => { player.speed *= 1.3; setTimeout(() => { player.speed /= 1.3; }, 5000); } },
+                        { name: '🛡 FORTIFY', desc: 'Brief shield!', effect: () => { activePowerups.shield = Math.max(activePowerups.shield, 4); } },
+                        { name: '💎 JACKPOT', desc: 'Score x3!', effect: () => { scoreMult = Math.min(MULT_MAX, scoreMult + 2); } },
+                    ];
+                    const reward = rewards[Math.floor(Math.random() * rewards.length)];
+                    reward.effect();
+                    waveAnnounce = `WAVE ${wave} — ${reward.name}`; waveAnnounceTimer = 2.5;
+                    flashColor = '#ffdd00'; flashAlpha = 0.3;
+                    // Rising victory chime
+                    if (!muted && audioCtx) {
+                        [660, 880, 1100].forEach((f, i) => setTimeout(() => playSound(f, 0.15, 'sine', 0.08), i * 60));
+                    }
+                    // Celebratory particle burst from center
+                    if (settings.particles) {
+                        for (let i = 0; i < 24; i++) {
+                            const a = (Math.PI * 2 / 24) * i, sp = 150 + Math.random() * 100;
+                            particles.push({ x: WIDTH/2, y: HEIGHT/2, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 1, decay: 0.02, size: 3 + Math.random()*3, color: '#ffdd00' });
+                        }
+                    }
+                }
             }
         } else if (waveTimer >= waveDuration) {
             waveBreak = true; waveBreakTimer = 0;
@@ -1163,7 +1187,15 @@
 
         // Dash update
         if (dash.active) { dash.timer -= dt; if (dash.timer <= 0) { dash.active = false; dash.invincible = false; } }
-        if (dash.cooldown > 0) dash.cooldown -= dt;
+        if (dash.cooldown > 0) {
+            const wasCooling = dash.cooldown > 0;
+            dash.cooldown -= dt;
+            if (dash.cooldown <= 0 && wasCooling && !dash.active) {
+                dashReadyFlash = 0.4;
+                playSound(1200, 0.08, 'sine', 0.06);
+            }
+        }
+        if (dashReadyFlash > 0) dashReadyFlash -= dt;
 
         // Power-up timers
         for (const k in activePowerups) { if (activePowerups[k] > 0) activePowerups[k] -= dt; }
@@ -2092,6 +2124,15 @@
                 const pct = 1 - dash.cooldown / dash.cooldownTime;
                 ctx.strokeStyle = 'rgba(0,255,136,0.3)'; ctx.lineWidth = 2;
                 ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 18, -Math.PI/2, -Math.PI/2 + Math.PI*2*pct); ctx.stroke();
+            }
+            // Dash ready flash — bright green ring burst when dash becomes available
+            if (dashReadyFlash > 0) {
+                const t = dashReadyFlash / 0.4;
+                const expandR = player.radius + 18 + (1 - t) * 8;
+                ctx.strokeStyle = `rgba(0,255,136,${t * 0.8})`; ctx.lineWidth = 2 + t * 2;
+                ctx.shadowBlur = 15 * t; ctx.shadowColor = '#00ff88';
+                ctx.beginPath(); ctx.arc(player.x, player.y, expandR, 0, Math.PI * 2); ctx.stroke();
+                ctx.shadowBlur = 0;
             }
 
             // Combo timer bar — drains urgently below player
