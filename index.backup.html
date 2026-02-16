@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v59 🥈 Iteration #59</title>
+    <title>NEON SURVIVE — Self-Improving Game v60 🥈 Iteration #60</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -155,12 +155,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #59 🥈</div><div>Grade: 99/100</div></div>
+        <div class="hud-right"><div>Iteration #60 🥈</div><div>Grade: 99/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v59 🥈 Silver Milestone!</div>
+        <div class="subtitle">Self-Improving Game v60 🥈 Silver Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -171,8 +171,8 @@
         <button class="start-btn" id="dailyBtn" style="margin-top:12px;font-size:16px;padding:8px 20px;background:rgba(255,221,0,0.08);border-color:#ffdd00;color:#ffdd00;text-shadow:0 0 10px #ffdd00;" onclick="startDailyChallenge()">🎯 DAILY CHALLENGE</button>
         <div id="dailyInfo" style="font-size:12px;opacity:0.7;margin-top:6px;color:#ffdd00;text-align:center;line-height:1.5;"></div>
         <button class="start-btn" style="margin-top:12px;font-size:16px;padding:8px 20px;opacity:0.7" onclick="openSettings()">⚙ SETTINGS</button>
-        <div style="margin-top:15px;font-size:28px;animation:pulse 2s infinite;text-shadow:0 0 20px #c0c0c0,0 0 40px #c0c0c0;color:#c0c0c0;">🥈 SILVER MILESTONE — 59 Iterations!</div>
-        <div style="margin-top:8px;font-size:14px;opacity:0.7;color:#ffd700;animation:pulse 3s infinite;">🥇 Gold at 100 — <span style="color:#fff;font-weight:bold;">41 iterations to go!</span></div>
+        <div style="margin-top:15px;font-size:28px;animation:pulse 2s infinite;text-shadow:0 0 20px #c0c0c0,0 0 40px #c0c0c0;color:#c0c0c0;">🥈 SILVER MILESTONE — 60 Iterations!</div>
+        <div style="margin-top:8px;font-size:14px;opacity:0.7;color:#ffd700;animation:pulse 3s infinite;">🥇 Gold at 100 — <span style="color:#fff;font-weight:bold;">40 iterations to go!</span></div>
         <div id="pilotRank" style="margin-top:20px;font-size:14px;text-align:center;line-height:1.6;"></div>
         <div id="lifetimeStats" style="margin-top:10px;font-size:12px;opacity:0.5;text-align:center;line-height:1.8;"></div>
         <div id="achievementCount" style="margin-top:8px;font-size:12px;opacity:0.6;color:#ffdd00;text-align:center;"></div>
@@ -206,11 +206,11 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #59</strong> 🥈 <em>Silver Milestone!</em> Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #60</strong> 🥈 <em>Silver Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #59 🥈 | Grade: 99/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #60 🥈 | Grade: 99/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
@@ -3279,15 +3279,18 @@
             }
         }
 
-        // Danger vignette — radial darkening when enemies are very close
+        // Danger vignette — red screen edge overlay when enemies are very close (no per-frame gradient)
         if (isActive && dangerProximity > 0.1) {
-            const vigAlpha = dangerProximity * 0.35;
-            const vigGrad = ctx.createRadialGradient(player.x, player.y, HEIGHT * 0.2, player.x, player.y, HEIGHT * 0.7);
-            vigGrad.addColorStop(0, 'rgba(0,0,0,0)');
-            vigGrad.addColorStop(0.6, 'rgba(0,0,0,0)');
-            vigGrad.addColorStop(1, `rgba(180,0,0,${vigAlpha})`);
-            ctx.fillStyle = vigGrad;
-            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            const vigAlpha = dangerProximity * 0.25;
+            ctx.globalAlpha = vigAlpha;
+            ctx.fillStyle = '#b40000';
+            // Draw red border strips (top/bottom/left/right) for danger feel
+            const dw = 60;
+            ctx.fillRect(0, 0, WIDTH, dw);
+            ctx.fillRect(0, HEIGHT - dw, WIDTH, dw);
+            ctx.fillRect(0, dw, dw, HEIGHT - 2*dw);
+            ctx.fillRect(WIDTH - dw, dw, dw, HEIGHT - 2*dw);
+            ctx.globalAlpha = 1;
         }
 
         // Edge warnings
@@ -3331,20 +3334,26 @@
             ctx.fillStyle = cachedVignette;
             ctx.fillRect(0, 0, WIDTH, HEIGHT);
 
-            // Flow Zone screen edge glow — positive energy borders during combo streaks
+            // Flow Zone screen edge glow — cached gradients to avoid per-frame allocation
             if (flowZoneIntensity > 0.05) {
                 const fzH = (flowZoneHueShift * 2) % 360;
                 const fzAlpha = flowZoneIntensity * 0.15 * (0.7 + 0.3 * Math.sin(gameTime * 4));
                 const edgeW = 30 + flowZoneIntensity * 20;
-                ctx.globalAlpha = fzAlpha;
-                const fzL = ctx.createLinearGradient(0,0,edgeW,0); fzL.addColorStop(0,`hsl(${fzH},100%,60%)`); fzL.addColorStop(1,'transparent');
-                ctx.fillStyle = fzL; ctx.fillRect(0,0,edgeW,HEIGHT);
-                const fzR = ctx.createLinearGradient(WIDTH,0,WIDTH-edgeW,0); fzR.addColorStop(0,`hsl(${fzH+60},100%,60%)`); fzR.addColorStop(1,'transparent');
-                ctx.fillStyle = fzR; ctx.fillRect(WIDTH-edgeW,0,edgeW,HEIGHT);
-                const fzT = ctx.createLinearGradient(0,0,0,edgeW); fzT.addColorStop(0,`hsl(${fzH+120},100%,60%)`); fzT.addColorStop(1,'transparent');
-                ctx.fillStyle = fzT; ctx.fillRect(0,0,WIDTH,edgeW);
-                const fzB = ctx.createLinearGradient(0,HEIGHT,0,HEIGHT-edgeW); fzB.addColorStop(0,`hsl(${fzH+180},100%,60%)`); fzB.addColorStop(1,'transparent');
-                ctx.fillStyle = fzB; ctx.fillRect(0,HEIGHT-edgeW,WIDTH,edgeW);
+                // Use simple fillRect strips with decreasing alpha instead of per-frame gradients
+                const strips = 5;
+                for (let i = 0; i < strips; i++) {
+                    const a = fzAlpha * (1 - i / strips);
+                    const sw = edgeW / strips;
+                    ctx.globalAlpha = a;
+                    ctx.fillStyle = `hsl(${fzH},100%,60%)`;
+                    ctx.fillRect(i * sw, 0, sw, HEIGHT);
+                    ctx.fillStyle = `hsl(${fzH+60},100%,60%)`;
+                    ctx.fillRect(WIDTH - (i+1)*sw, 0, sw, HEIGHT);
+                    ctx.fillStyle = `hsl(${fzH+120},100%,60%)`;
+                    ctx.fillRect(0, i * sw, WIDTH, sw);
+                    ctx.fillStyle = `hsl(${fzH+180},100%,60%)`;
+                    ctx.fillRect(0, HEIGHT - (i+1)*sw, WIDTH, sw);
+                }
                 ctx.globalAlpha = 1;
             }
         }
