@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v28 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v29 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -127,12 +127,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #28 🥉</div><div>Grade: 91/100</div></div>
+        <div class="hud-right"><div>Iteration #29 🥉</div><div>Grade: 91/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v28 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v29 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -156,40 +156,44 @@
         <div class="game-over-title">GAME OVER</div>
         <div class="final-score" id="finalScore">SCORE: 0</div>
         <button class="start-btn" id="restartBtn">PLAY AGAIN</button>
-        <div style="margin-top:12px;font-size:12px;opacity:0.4;">Press ENTER or SPACE to retry</div>
+        <div style="margin-top:12px;font-size:12px;opacity:0.4;">Press R / ENTER / SPACE to retry</div>
     </div>
     <div id="settingsPanel">
         <h2>⚙ SETTINGS</h2>
         <div class="setting-row"><label>CRT Scanlines</label><div class="setting-toggle on" id="toggleCRT" onclick="toggleSetting('crt')"></div></div>
         <div class="setting-row"><label>Screen Shake</label><div class="setting-toggle on" id="toggleShake" onclick="toggleSetting('shake')"></div></div>
         <div class="setting-row"><label>Particles</label><div class="setting-toggle on" id="toggleParticles" onclick="toggleSetting('particles')"></div></div>
+        <div class="setting-row"><label>Volume</label><input type="range" min="0" max="100" id="volumeSlider" style="width:100px;accent-color:#00ff88;cursor:pointer;" oninput="setVolume(this.value)"><span id="volumeLabel" style="font-size:12px;opacity:0.6;min-width:30px;text-align:right;">80%</span></div>
         <button class="settings-close" onclick="closeSettings()">DONE</button>
     </div>
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #28</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #29</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #28 🥉 | Grade: 91/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #29 🥉 | Grade: 92/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 28 (Settings Panel + Perfect Wave Bonus)
+    // NEON SURVIVE — Iteration 29 (Volume Control + Quick Restart)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d', { alpha: false });
     let WIDTH, HEIGHT;
     // Settings
-    let settings = JSON.parse(localStorage.getItem('neonSurviveSettings') || '{"crt":true,"shake":true,"particles":true}');
+    let settings = JSON.parse(localStorage.getItem('neonSurviveSettings') || '{"crt":true,"shake":true,"particles":true,"volume":80}');
+    if (settings.volume === undefined) settings.volume = 80;
+    let masterVolume = settings.volume / 100;
     function saveSettings() { localStorage.setItem('neonSurviveSettings', JSON.stringify(settings)); }
     function toggleSetting(key) {
         settings[key] = !settings[key]; saveSettings();
         document.getElementById('toggle' + key.charAt(0).toUpperCase() + key.slice(1)).classList.toggle('on', settings[key]);
     }
-    function openSettings() { document.getElementById('settingsPanel').classList.add('show'); }
+    function setVolume(val) { settings.volume = parseInt(val); masterVolume = settings.volume / 100; saveSettings(); document.getElementById('volumeLabel').textContent = val + '%'; }
+    function openSettings() { document.getElementById('settingsPanel').classList.add('show'); document.getElementById('volumeSlider').value = settings.volume; document.getElementById('volumeLabel').textContent = settings.volume + '%'; }
     function closeSettings() { document.getElementById('settingsPanel').classList.remove('show'); }
     // Init toggles on load
     setTimeout(() => {
@@ -483,7 +487,7 @@
         const gain = audioCtx.createGain();
         osc.type = type;
         osc.frequency.value = freq;
-        gain.gain.value = volume;
+        gain.gain.value = volume * masterVolume;
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + duration);
@@ -504,7 +508,7 @@
             osc.type = 'sine';
             osc.frequency.setValueAtTime(80, audioCtx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.12);
-            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.08 * masterVolume, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(); osc.stop(audioCtx.currentTime + 0.2);
@@ -517,13 +521,13 @@
 
     // Dash sound — whoosh
     function playDashSound() {
-        if (!audioCtx) return;
+        if (!audioCtx || muted) return;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(300, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.15 * masterVolume, audioCtx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
         osc.connect(gain); gain.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.2);
@@ -545,7 +549,7 @@
         osc1.type = 'sawtooth';
         osc1.frequency.setValueAtTime(80, audioCtx.currentTime);
         osc1.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.8);
-        g1.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        g1.gain.setValueAtTime(0.2 * masterVolume, audioCtx.currentTime);
         g1.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
         osc1.connect(g1); g1.connect(audioCtx.destination);
         osc1.start(); osc1.stop(audioCtx.currentTime + 0.9);
@@ -556,7 +560,7 @@
         const noise = audioCtx.createBufferSource();
         const g2 = audioCtx.createGain();
         noise.buffer = buf;
-        g2.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        g2.gain.setValueAtTime(0.15 * masterVolume, audioCtx.currentTime);
         g2.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
         noise.connect(g2); g2.connect(audioCtx.destination);
         noise.start();
@@ -574,7 +578,7 @@
         osc.type = 'sine';
         osc.frequency.setValueAtTime(baseFreq, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.3, audioCtx.currentTime + 0.08);
-        g.gain.setValueAtTime(0.06 + Math.min(combo, 10) * 0.01, audioCtx.currentTime);
+        g.gain.setValueAtTime((0.06 + Math.min(combo, 10) * 0.01) * masterVolume, audioCtx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
         osc.connect(g); g.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.2);
@@ -589,7 +593,7 @@
         osc.type = 'sine';
         osc.frequency.setValueAtTime(55, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(30, audioCtx.currentTime + 0.12);
-        g.gain.setValueAtTime(vol, audioCtx.currentTime);
+        g.gain.setValueAtTime(vol * masterVolume, audioCtx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.15);
         osc.connect(g); g.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.2);
@@ -603,7 +607,7 @@
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(400, audioCtx.currentTime + 0.06);
-        g.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        g.gain.setValueAtTime(0.04 * masterVolume, audioCtx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.06);
         osc.connect(g); g.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.08);
@@ -617,7 +621,7 @@
         osc.type = 'sine';
         osc.frequency.setValueAtTime(900 + Math.random() * 400, audioCtx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(1800, audioCtx.currentTime + 0.06);
-        g.gain.setValueAtTime(0.05, audioCtx.currentTime);
+        g.gain.setValueAtTime(0.05 * masterVolume, audioCtx.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
         osc.connect(g); g.connect(audioCtx.destination);
         osc.start(); osc.stop(audioCtx.currentTime + 0.1);
@@ -640,7 +644,7 @@
         bassDroneGain = audioCtx.createGain();
         bassDrone.type = 'sine';
         bassDrone.frequency.value = 40;
-        bassDroneGain.gain.value = 0.03;
+        bassDroneGain.gain.value = 0.03 * masterVolume;
         bassDrone.connect(bassDroneGain);
         bassDroneGain.connect(audioCtx.destination);
         bassDrone.start();
@@ -648,7 +652,7 @@
     function updateBassDrone(wave) {
         if (!bassDrone || !bassDroneGain) return;
         bassDrone.frequency.value = 35 + wave * 5;
-        bassDroneGain.gain.value = Math.min(0.06, 0.02 + wave * 0.005);
+        bassDroneGain.gain.value = Math.min(0.06, 0.02 + wave * 0.005) * masterVolume;
     }
     function stopBassDrone() {
         if (bassDrone) { try { bassDrone.stop(); } catch(e){} bassDrone = null; bassDroneGain = null; }
@@ -677,7 +681,7 @@
             const gain = audioCtx.createGain();
             osc.type = 'triangle';
             osc.frequency.value = freq;
-            gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.04 * masterVolume, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
             osc.connect(gain); gain.connect(audioCtx.destination);
             osc.start(); osc.stop(audioCtx.currentTime + 0.25);
@@ -725,7 +729,7 @@
             keys[e.key.toLowerCase()] = true;
             if (e.key === ' ' && gameState === 'playing' && !paused) { e.preventDefault(); tryDash(); }
             if ((e.key === 'p' || e.key === 'Escape') && gameState === 'playing') { e.preventDefault(); togglePause(); }
-            if ((e.key === 'Enter' || e.key === ' ') && gameState === 'gameover') { e.preventDefault(); startGame(); }
+            if ((e.key === 'Enter' || e.key === ' ' || e.key === 'r') && gameState === 'gameover') { e.preventDefault(); startGame(); }
         });
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
         canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; });
