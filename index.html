@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v56 🥈 Iteration #56</title>
+    <title>NEON SURVIVE — Self-Improving Game v57 🥈 Iteration #57</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -160,7 +160,7 @@
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v56 🥈 Silver Milestone!</div>
+        <div class="subtitle">Self-Improving Game v57 🥈 Silver Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -1244,8 +1244,16 @@
     // ============================================
     // DASH
     // ============================================
+    let dashBuffer = 0; // input buffer timer (seconds) — queues dash if pressed during cooldown
+    const DASH_BUFFER_WINDOW = 0.2; // 200ms buffer
+
     function tryDash() {
-        if (dash.cooldown > 0 || dash.active) return;
+        if (dash.cooldown > 0 || dash.active) {
+            // Buffer the input — will fire when cooldown expires
+            dashBuffer = DASH_BUFFER_WINDOW;
+            return;
+        }
+        dashBuffer = 0;
         dash.active = true;
         dash.timer = dash.duration;
         dash.cooldown = dash.cooldownTime;
@@ -1360,7 +1368,7 @@
         scoreMult = 1; scoreMultTarget = 1; scoreMultDecayTimer = 0; scoreMultPulse = 0;
         paused = false; newHighScore = false; document.getElementById('pauseOverlay').classList.remove('show');
         document.getElementById('pauseBtn').style.display = 'block';
-        dash.active = false; dash.timer = 0; dash.cooldown = 0; dash.invincible = false;
+        dash.active = false; dash.timer = 0; dash.cooldown = 0; dash.invincible = false; dashBuffer = 0;
         blastRings = [];
         laserBarriers = [];
         grazeExpand = 1; perkChoiceActive = false;
@@ -1772,8 +1780,11 @@
             if (dash.cooldown <= 0 && wasCooling && !dash.active) {
                 dashReadyFlash = 0.4;
                 playSound(1200, 0.08, 'sine', 0.06);
+                // Consume buffered dash input
+                if (dashBuffer > 0) { dashBuffer = 0; tryDash(); }
             }
         }
+        if (dashBuffer > 0) dashBuffer -= dt;
         if (dashReadyFlash > 0) dashReadyFlash -= dt;
 
         // Power-up timers
