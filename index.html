@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v41 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v43 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -127,12 +127,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #37 🥉</div><div>Grade: 95/100</div></div>
+        <div class="hud-right"><div>Iteration #42 🥉</div><div>Grade: 96/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v41 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v43 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -171,11 +171,11 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #37</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #42</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #37 🥉 | Grade: 95/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #42 🥉 | Grade: 96/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
@@ -246,7 +246,7 @@
     let cachedVignette = null, vignetteW = 0, vignetteH = 0;
 
     // Cached background gradient
-    let cachedBgGrad = null, bgGradWave = -1, bgGradW = 0, bgGradH = 0, bgGradDying = false;
+    let cachedBgGrad = null, bgGradWave = -1, bgGradW = 0, bgGradH = 0, bgGradDying = false, bgGradFlow = 0;
 
     // Cached CRT scanline overlay
     let cachedScanlines = null, scanW = 0, scanH = 0;
@@ -382,6 +382,10 @@
 
     // Wave freeze — brief pause on wave clear for impact
     let waveFreezeTimer = 0;
+
+    // Flow Zone — visual transformation on high combo streaks
+    let flowZoneIntensity = 0; // 0-1, smoothly interpolated
+    let flowZoneHueShift = 0; // animated hue rotation during flow
 
     // Persistent XP/Level system
     let xpData = JSON.parse(localStorage.getItem('neonSurviveXP') || '{"xp":0,"level":1,"totalXP":0}');
@@ -1330,6 +1334,12 @@
         if (killStreakAnnounceTimer > 0) killStreakAnnounceTimer -= dt;
         if (comboAnnounceTimer > 0) { comboAnnounceTimer -= dt; comboAnnounceScale = Math.max(1, comboAnnounceScale - dt * 2); }
 
+        // Flow Zone intensity — smooth interpolation based on combo
+        const targetFlow = comboCount >= 20 ? 1.0 : comboCount >= 10 ? 0.7 : comboCount >= 5 ? 0.4 : 0;
+        flowZoneIntensity += (targetFlow - flowZoneIntensity) * dt * 3;
+        if (flowZoneIntensity < 0.01) flowZoneIntensity = 0;
+        if (flowZoneIntensity > 0) flowZoneHueShift += dt * (60 + flowZoneIntensity * 120);
+
         // Laser barriers update
         laserBarriers.forEach(lb => {
             lb.life -= dt;
@@ -1470,6 +1480,7 @@
         if (orbChainTimer > 0) { orbChainTimer -= dt; } else { orbChainCount = 0; }
         updateParticles(dt);
         updateStars(dt);
+        updateEnvironment(dt);
         // Boss update
         if (boss) {
             boss.pulse += dt * 3;
@@ -1800,6 +1811,76 @@
         if (particles.length > maxParticles) particles.splice(0, particles.length - maxParticles);
     }
 
+    // === ENVIRONMENT ATMOSPHERE SYSTEM ===
+    // Wave-dependent weather: aurora bands + lightning on high waves
+    let envLightning = { active: false, timer: 0, alpha: 0, nextStrike: 3 + Math.random() * 5 };
+    let auroraPhase = 0;
+
+    function updateEnvironment(dt) {
+        auroraPhase += dt * 0.4;
+        // Lightning system — triggers on wave 7+ with dramatic flash + sound
+        if (wave >= 7 && gameState === 'playing') {
+            envLightning.nextStrike -= dt;
+            if (envLightning.nextStrike <= 0) {
+                envLightning.active = true;
+                envLightning.timer = 0.35;
+                envLightning.alpha = 0.5 + Math.random() * 0.3;
+                envLightning.nextStrike = 4 + Math.random() * 8 - Math.min(wave * 0.3, 3);
+                // Thunder sound — low rumble
+                if (audioCtx && !muted) {
+                    const noise = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    noise.type = 'sawtooth';
+                    noise.frequency.setValueAtTime(60, audioCtx.currentTime);
+                    noise.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.4);
+                    g.gain.setValueAtTime(0.06 * masterVolume, audioCtx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                    noise.connect(g); g.connect(audioCtx.destination);
+                    noise.start(); noise.stop(audioCtx.currentTime + 0.5);
+                }
+            }
+            if (envLightning.timer > 0) envLightning.timer -= dt;
+        }
+    }
+
+    function renderAurora() {
+        if (gameState !== 'playing' && gameState !== 'dying') return;
+        // Aurora bands — wave-colored sine waves across the top third
+        const bands = Math.min(3, 1 + Math.floor(wave / 3));
+        const baseHue = ((wave - 1) * 40) % 360;
+        ctx.save();
+        for (let b = 0; b < bands; b++) {
+            const yBase = HEIGHT * (0.08 + b * 0.07);
+            const hue = (baseHue + b * 60) % 360;
+            const amp = 15 + Math.sin(auroraPhase * 0.7 + b) * 8;
+            const alpha = 0.025 + flowZoneIntensity * 0.02;
+            ctx.beginPath();
+            ctx.moveTo(0, yBase);
+            for (let x = 0; x <= WIDTH; x += 8) {
+                const y = yBase + Math.sin(x * 0.008 + auroraPhase + b * 1.5) * amp
+                    + Math.sin(x * 0.003 - auroraPhase * 0.6) * amp * 0.5;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(WIDTH, 0);
+            ctx.lineTo(0, 0);
+            ctx.closePath();
+            ctx.fillStyle = `hsla(${hue}, 80%, 55%, ${alpha})`;
+            ctx.fill();
+        }
+        ctx.restore();
+
+        // Lightning flash overlay
+        if (envLightning.timer > 0) {
+            const t = envLightning.timer / 0.35;
+            // Double-flash pattern (realistic lightning)
+            const flash = t > 0.7 ? (t - 0.7) / 0.3 : t < 0.3 ? t / 0.3 * 0.4 : 0;
+            if (flash > 0) {
+                ctx.fillStyle = `rgba(180,200,255,${flash * envLightning.alpha * 0.15})`;
+                ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            }
+        }
+    }
+
     function updateStars(dt) {
         stars.forEach(s => {
             s.y += s.speed;
@@ -1946,14 +2027,18 @@
         const isActive = (gameState === 'playing' || gameState === 'dying') && !paused;
         if (isActive) {
             const isDying = gameState === 'dying';
-            if (!cachedBgGrad || bgGradWave !== wave || bgGradW !== WIDTH || bgGradH !== HEIGHT || bgGradDying !== isDying) {
-                const waveHue = isDying ? 0 : ((wave - 1) * 30) % 360;
-                const sat = isDying ? '60%' : '40%';
+            const flowActive = flowZoneIntensity > 0.05;
+            const flowKey = flowActive ? Math.floor(flowZoneIntensity * 10) : 0;
+            if (!cachedBgGrad || bgGradWave !== wave || bgGradW !== WIDTH || bgGradH !== HEIGHT || bgGradDying !== isDying || (flowActive && bgGradFlow !== flowKey)) {
+                const baseHue = isDying ? 0 : ((wave - 1) * 30) % 360;
+                const waveHue = flowActive ? baseHue + flowZoneHueShift * 0.5 : baseHue;
+                const sat = isDying ? '60%' : flowActive ? `${40 + flowZoneIntensity * 35}%` : '40%';
+                const light = flowActive ? `${4 + flowZoneIntensity * 3}%` : '4%';
                 cachedBgGrad = ctx.createRadialGradient(WIDTH/2, HEIGHT/2, 0, WIDTH/2, HEIGHT/2, HEIGHT * 0.9);
-                cachedBgGrad.addColorStop(0, `hsla(${waveHue}, ${sat}, 4%, 1)`);
+                cachedBgGrad.addColorStop(0, `hsla(${waveHue}, ${sat}, ${light}, 1)`);
                 cachedBgGrad.addColorStop(0.5, `hsla(${waveHue + 20}, 50%, 2%, 1)`);
                 cachedBgGrad.addColorStop(1, '#000');
-                bgGradWave = wave; bgGradW = WIDTH; bgGradH = HEIGHT; bgGradDying = isDying;
+                bgGradWave = wave; bgGradW = WIDTH; bgGradH = HEIGHT; bgGradDying = isDying; bgGradFlow = flowKey;
             }
             ctx.fillStyle = cachedBgGrad;
         } else {
@@ -1972,7 +2057,9 @@
         if (isActive) {
             const gridSize = 50;
             const gox = (-player.x * 0.15) % gridSize, goy = (-player.y * 0.15) % gridSize;
-            ctx.strokeStyle = 'rgba(0,255,136,0.04)'; ctx.lineWidth = 1;
+            const gridAlpha = 0.04 + flowZoneIntensity * 0.06;
+            const gridHue = flowZoneIntensity > 0.05 ? `hsla(${(flowZoneHueShift * 2) % 360}, 100%, 60%, ${gridAlpha})` : `rgba(0,255,136,${gridAlpha})`;
+            ctx.strokeStyle = gridHue; ctx.lineWidth = 1;
             for (let x = gox; x < WIDTH; x += gridSize) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,HEIGHT); ctx.stroke(); }
             for (let y = goy; y < HEIGHT; y += gridSize) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(WIDTH,y); ctx.stroke(); }
         }
@@ -1988,6 +2075,9 @@
 
         // Nebula clouds
         renderNebulae();
+
+        // Aurora atmosphere
+        renderAurora();
 
         // Attract mode enemies (menu/gameover background)
         if (gameState === 'menu' || gameState === 'gameover') renderAttractMode();
@@ -2094,6 +2184,28 @@
                     ctx.beginPath(); ctx.arc(tipX, tipY, 4, 0, Math.PI * 2); ctx.fill();
                     ctx.globalAlpha = 1;
                 }
+            }
+
+            // Flow Zone aura — expanding concentric rings during high combo
+            if (flowZoneIntensity > 0.05) {
+                ctx.save();
+                const fzHue = (flowZoneHueShift * 3) % 360;
+                const ringCount = flowZoneIntensity > 0.6 ? 3 : flowZoneIntensity > 0.3 ? 2 : 1;
+                for (let r = 0; r < ringCount; r++) {
+                    const phase = (gameTime * (1.5 + r * 0.5) + r * 2.1) % 1;
+                    const radius = player.radius + 20 + phase * 60 * (1 + flowZoneIntensity);
+                    const alpha = (1 - phase) * flowZoneIntensity * 0.25;
+                    ctx.beginPath(); ctx.arc(player.x, player.y, radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = `hsla(${fzHue + r * 40}, 100%, 65%, ${alpha})`;
+                    ctx.lineWidth = 2 - phase * 1.5; ctx.stroke();
+                }
+                // Flow Zone radial glow behind player
+                const glowR = player.radius * (3 + flowZoneIntensity * 2 + Math.sin(gameTime * 3) * 0.5);
+                const glowGrad = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, glowR);
+                glowGrad.addColorStop(0, `hsla(${fzHue}, 100%, 60%, ${flowZoneIntensity * 0.15})`);
+                glowGrad.addColorStop(1, 'transparent');
+                ctx.fillStyle = glowGrad; ctx.fillRect(player.x - glowR, player.y - glowR, glowR * 2, glowR * 2);
+                ctx.restore();
             }
 
             // Player (rotating triangle)
@@ -2511,6 +2623,23 @@
             }
             ctx.fillStyle = cachedVignette;
             ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+            // Flow Zone screen edge glow — positive energy borders during combo streaks
+            if (flowZoneIntensity > 0.05) {
+                const fzH = (flowZoneHueShift * 2) % 360;
+                const fzAlpha = flowZoneIntensity * 0.15 * (0.7 + 0.3 * Math.sin(gameTime * 4));
+                const edgeW = 30 + flowZoneIntensity * 20;
+                ctx.globalAlpha = fzAlpha;
+                const fzL = ctx.createLinearGradient(0,0,edgeW,0); fzL.addColorStop(0,`hsl(${fzH},100%,60%)`); fzL.addColorStop(1,'transparent');
+                ctx.fillStyle = fzL; ctx.fillRect(0,0,edgeW,HEIGHT);
+                const fzR = ctx.createLinearGradient(WIDTH,0,WIDTH-edgeW,0); fzR.addColorStop(0,`hsl(${fzH+60},100%,60%)`); fzR.addColorStop(1,'transparent');
+                ctx.fillStyle = fzR; ctx.fillRect(WIDTH-edgeW,0,edgeW,HEIGHT);
+                const fzT = ctx.createLinearGradient(0,0,0,edgeW); fzT.addColorStop(0,`hsl(${fzH+120},100%,60%)`); fzT.addColorStop(1,'transparent');
+                ctx.fillStyle = fzT; ctx.fillRect(0,0,WIDTH,edgeW);
+                const fzB = ctx.createLinearGradient(0,HEIGHT,0,HEIGHT-edgeW); fzB.addColorStop(0,`hsl(${fzH+180},100%,60%)`); fzB.addColorStop(1,'transparent');
+                ctx.fillStyle = fzB; ctx.fillRect(0,HEIGHT-edgeW,WIDTH,edgeW);
+                ctx.globalAlpha = 1;
+            }
         }
 
         // Score multiplier bar (bottom-right, vertical)
@@ -2635,6 +2764,20 @@
             ctx.fillText(comboAnnounce, WIDTH/2, HEIGHT * 0.3);
             ctx.shadowBlur = 0;
             ctx.restore();
+        }
+
+        // Flow Zone indicator
+        if (flowZoneIntensity > 0.1 && gameState === 'playing') {
+            ctx.save();
+            const fzLabel = flowZoneIntensity > 0.85 ? '✦ TRANSCENDENT ✦' : flowZoneIntensity > 0.55 ? '⚡ DEEP FLOW ⚡' : '◈ FLOW ZONE ◈';
+            const fzHue = (flowZoneHueShift * 3) % 360;
+            const fzPulse = 0.7 + 0.3 * Math.sin(gameTime * 5);
+            ctx.globalAlpha = flowZoneIntensity * fzPulse;
+            ctx.font = 'bold 14px Courier New'; ctx.textAlign = 'center';
+            ctx.fillStyle = `hsl(${fzHue}, 100%, 70%)`;
+            ctx.shadowBlur = 15; ctx.shadowColor = `hsl(${fzHue}, 100%, 60%)`;
+            ctx.fillText(fzLabel, WIDTH / 2, HEIGHT - 25);
+            ctx.shadowBlur = 0; ctx.restore();
         }
 
         // Wave progress bar — enhanced bar at top of screen
