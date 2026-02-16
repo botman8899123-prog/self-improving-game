@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v51 🥈 Iteration #51</title>
+    <title>NEON SURVIVE — Self-Improving Game v52 🥈 Iteration #52</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -155,12 +155,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #51 🥈</div><div>Grade: 99/100</div></div>
+        <div class="hud-right"><div>Iteration #52 🥈</div><div>Grade: 99/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v51 🥈 Silver Milestone!</div>
+        <div class="subtitle">Self-Improving Game v52 🥈 Silver Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -171,8 +171,8 @@
         <button class="start-btn" id="dailyBtn" style="margin-top:12px;font-size:16px;padding:8px 20px;background:rgba(255,221,0,0.08);border-color:#ffdd00;color:#ffdd00;text-shadow:0 0 10px #ffdd00;" onclick="startDailyChallenge()">🎯 DAILY CHALLENGE</button>
         <div id="dailyInfo" style="font-size:12px;opacity:0.7;margin-top:6px;color:#ffdd00;text-align:center;line-height:1.5;"></div>
         <button class="start-btn" style="margin-top:12px;font-size:16px;padding:8px 20px;opacity:0.7" onclick="openSettings()">⚙ SETTINGS</button>
-        <div style="margin-top:15px;font-size:28px;animation:pulse 2s infinite;text-shadow:0 0 20px #c0c0c0,0 0 40px #c0c0c0;color:#c0c0c0;">🥈 SILVER MILESTONE — 51 Iterations!</div>
-        <div style="margin-top:8px;font-size:14px;opacity:0.7;color:#ffd700;animation:pulse 3s infinite;">🥇 Gold at 100 — <span style="color:#fff;font-weight:bold;">49 iterations to go!</span></div>
+        <div style="margin-top:15px;font-size:28px;animation:pulse 2s infinite;text-shadow:0 0 20px #c0c0c0,0 0 40px #c0c0c0;color:#c0c0c0;">🥈 SILVER MILESTONE — 52 Iterations!</div>
+        <div style="margin-top:8px;font-size:14px;opacity:0.7;color:#ffd700;animation:pulse 3s infinite;">🥇 Gold at 100 — <span style="color:#fff;font-weight:bold;">48 iterations to go!</span></div>
         <div id="pilotRank" style="margin-top:20px;font-size:14px;text-align:center;line-height:1.6;"></div>
         <div id="lifetimeStats" style="margin-top:10px;font-size:12px;opacity:0.5;text-align:center;line-height:1.8;"></div>
         <div id="achievementCount" style="margin-top:8px;font-size:12px;opacity:0.6;color:#ffdd00;text-align:center;"></div>
@@ -206,11 +206,11 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #51</strong> 🥈 <em>Silver Milestone!</em> Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #52</strong> 🥈 <em>Silver Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #51 🥈 | Grade: 99/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #52 🥈 | Grade: 99/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
@@ -375,6 +375,13 @@
 
     // Player
     let player = { x: 0, y: 0, vx: 0, vy: 0, radius: 12, baseRadius: 12, trail: [] };
+
+    // Ghost Replay — shows previous run's path as a faint ghost ship
+    let ghostRecording = []; // current run recording: [{x,y,angle}]
+    let ghostPlayback = JSON.parse(localStorage.getItem('neonSurviveGhost') || 'null'); // previous run
+    let ghostFrame = 0;
+    let ghostRecordTimer = 0;
+    const GHOST_RECORD_INTERVAL = 1/15; // record 15fps to keep it lightweight
 
     // Dash
     let dash = { active: false, timer: 0, cooldown: 0, duration: 0.15, cooldownTime: 1.2, speed: 1200, invincible: false };
@@ -1221,6 +1228,7 @@
         document.getElementById('muteBtn').style.display = 'block';
         document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
         gameState = 'playing'; score = 0; grazeCount = 0; gameTime = 0; difficulty = 1; orbChainCount = 0; orbChainTimer = 0; hitFreezeTimer = 0;
+        ghostRecording = []; ghostFrame = 0; ghostRecordTimer = 0;
         player.x = WIDTH / 2; player.y = HEIGHT / 2; player.vx = 0; player.vy = 0; player.trail = [];
         // Apply daily challenge player mods
         if (dailyChallengeActive) { player.radius = player.baseRadius * dailyMods.playerRadiusMult; }
@@ -1279,6 +1287,13 @@
             particles.push({ x: player.x, y: player.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 1.5, decay: 0.012, size: Math.random()*5+2, color: Math.random()>0.5?'#ff0044':'#ff8800' });
         }
         playDeathSound();
+        // Save ghost recording for next run (only if meaningful length)
+        if (ghostRecording.length > 30) {
+            // Keep max ~90s of ghost data (15fps * 3 values * 90s = 4050 entries)
+            const maxEntries = 15 * 3 * 90;
+            localStorage.setItem('neonSurviveGhost', JSON.stringify(ghostRecording.slice(0, maxEntries)));
+            ghostPlayback = ghostRecording.slice(0, maxEntries);
+        }
         // Award XP for this run
         const xpEarned = Math.floor(score * 0.1 + wave * 20 + grazeCount * 5);
         addXP(xpEarned);
@@ -1459,6 +1474,13 @@
         const timeMult = (activePowerups.slowmo > 0 ? 0.5 : 1) * btMult;
         const eDt = dt * timeMult; // Enemy delta time (slowed)
         gameTime += dt;
+        // Ghost recording
+        ghostRecordTimer += dt;
+        if (ghostRecordTimer >= GHOST_RECORD_INTERVAL) {
+            ghostRecordTimer -= GHOST_RECORD_INTERVAL;
+            const angle = Math.atan2(player.vy, player.vx) || 0;
+            ghostRecording.push(Math.round(player.x)|0, Math.round(player.y)|0, Math.round(angle*100)/100);
+        }
         // Periodic achievement check (every 5s for time-based)
         if (Math.floor(gameTime) % 5 === 0 && Math.floor(gameTime) !== Math.floor(gameTime - dt)) checkAchievements();
 
@@ -2353,6 +2375,39 @@
         if (gameState === 'menu' || gameState === 'gameover') renderAttractMode();
 
         if (isActive) {
+            // Ghost replay — previous run's path
+            if (ghostPlayback && ghostPlayback.length > 9 && settings.particles) {
+                const gIdx = ghostFrame * 3;
+                if (gIdx + 2 < ghostPlayback.length) {
+                    const gx = ghostPlayback[gIdx], gy = ghostPlayback[gIdx+1], ga = ghostPlayback[gIdx+2];
+                    // Draw ghost ship (faint, slightly smaller)
+                    ctx.save();
+                    ctx.globalAlpha = 0.15 + Math.sin(gameTime * 3) * 0.05;
+                    ctx.translate(gx, gy); ctx.rotate(ga);
+                    const gr = player.radius * 0.85;
+                    ctx.strokeStyle = '#00ff88';
+                    ctx.lineWidth = 1;
+                    ctx.shadowBlur = 8; ctx.shadowColor = '#00ff8844';
+                    ctx.beginPath();
+                    ctx.moveTo(gr * 1.3, 0); ctx.lineTo(-gr * 0.8, -gr * 0.9);
+                    ctx.lineTo(-gr * 0.4, 0); ctx.lineTo(-gr * 0.8, gr * 0.9);
+                    ctx.closePath(); ctx.stroke();
+                    ctx.shadowBlur = 0;
+                    ctx.restore();
+                    // Ghost label (first 3 seconds only)
+                    if (ghostFrame < 45) {
+                        ctx.save();
+                        ctx.globalAlpha = Math.max(0, 0.4 - ghostFrame / 112);
+                        ctx.fillStyle = '#00ff88';
+                        ctx.font = '10px Courier New';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('GHOST', gx, gy - gr - 8);
+                        ctx.restore();
+                    }
+                    ghostFrame++;
+                }
+            }
+
             // Player trail
             player.trail.forEach(t => {
                 if (t.life > 0) {
