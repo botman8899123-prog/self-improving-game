@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v25 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v27 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -101,12 +101,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #25 🥉</div><div>Grade: 89/100</div></div>
+        <div class="hud-right"><div>Iteration #27 🥉</div><div>Grade: 90/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v25 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v27 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -128,20 +128,21 @@
         <div class="game-over-title">GAME OVER</div>
         <div class="final-score" id="finalScore">SCORE: 0</div>
         <button class="start-btn" id="restartBtn">PLAY AGAIN</button>
+        <div style="margin-top:12px;font-size:12px;opacity:0.4;">Press ENTER or SPACE to retry</div>
     </div>
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #25</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #27</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #25 🥉 | Grade: 89/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #27 🥉 | Grade: 90/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 25 (Bronze Milestone + Performance Audit)
+    // NEON SURVIVE — Iteration 27 (Combo Announcements + Quick Restart + Wave Preview)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d', { alpha: false });
@@ -156,6 +157,15 @@
     // Lifetime stats
     let lifetime = JSON.parse(localStorage.getItem('neonSurviveLifetime') || '{"games":0,"bestWave":0,"totalKills":0,"totalGrazes":0,"totalTime":0,"bestCombo":0}');
     function saveLifetime() { localStorage.setItem('neonSurviveLifetime', JSON.stringify(lifetime)); }
+
+    // Hit freeze (game feel juice)
+    let hitFreezeTimer = 0;
+
+    // Wave progress bar
+    // (rendered in render(), uses waveTimer/waveDuration)
+
+    // Orb collection chain
+    let orbChainCount = 0, orbChainTimer = 0;
 
     // Edge warnings
     let edgeWarnings = [];
@@ -218,6 +228,18 @@
     let floatingTexts = [];
     function spawnFloatingText(x, y, text, color = '#00ff88', size = 18, duration = 1.0) {
         floatingTexts.push({ x, y, text, color, size, duration, maxDuration: duration, vy: -80 - Math.random() * 30, vx: (Math.random() - 0.5) * 40 });
+    }
+
+    // Combo announcement system — fighting game style
+    let comboAnnounce = '', comboAnnounceTimer = 0, comboAnnounceColor = '#00ffff', comboAnnounceScale = 1;
+    function getComboAnnouncement(combo) {
+        if (combo >= 20) return { text: '☠️ GODLIKE!', color: '#ff00ff', sound: 2000 };
+        if (combo >= 15) return { text: '🔥 LEGENDARY!', color: '#ffdd00', sound: 1800 };
+        if (combo >= 10) return { text: '⚡ ULTRA!', color: '#ff8800', sound: 1600 };
+        if (combo >= 7) return { text: '💥 MEGA!', color: '#ff4400', sound: 1400 };
+        if (combo >= 5) return { text: 'SUPER!', color: '#ffaa00', sound: 1200 };
+        if (combo >= 3) return { text: 'TRIPLE!', color: '#00ffff', sound: 1000 };
+        return null;
     }
 
     // Game history (last 5 games stored in localStorage)
@@ -648,6 +670,7 @@
             keys[e.key.toLowerCase()] = true;
             if (e.key === ' ' && gameState === 'playing' && !paused) { e.preventDefault(); tryDash(); }
             if ((e.key === 'p' || e.key === 'Escape') && gameState === 'playing') { e.preventDefault(); togglePause(); }
+            if ((e.key === 'Enter' || e.key === ' ') && gameState === 'gameover') { e.preventDefault(); startGame(); }
         });
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
         canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; });
@@ -714,7 +737,7 @@
         if (!muted) { startBeat(); startBassDrone(); startArp(); }
         document.getElementById('muteBtn').style.display = 'block';
         document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
-        gameState = 'playing'; score = 0; grazeCount = 0; gameTime = 0; difficulty = 1;
+        gameState = 'playing'; score = 0; grazeCount = 0; gameTime = 0; difficulty = 1; orbChainCount = 0; orbChainTimer = 0; hitFreezeTimer = 0;
         player.x = WIDTH / 2; player.y = HEIGHT / 2; player.vx = 0; player.vy = 0; player.trail = [];
         enemies = []; particles = []; powerups = []; scoreOrbs = [];
         lastSpawn = 0; lastPowerupSpawn = 0;
@@ -828,7 +851,9 @@
         lastTime = timestamp;
         const dt = Math.min(rawDt, 1/30); // Cap dt to prevent physics jumps
 
-        if (gameState === 'playing' && !paused) update(dt, timestamp);
+        // Hit freeze — skip update for juicy pause on graze
+        if (hitFreezeTimer > 0) { hitFreezeTimer -= rawDt; }
+        if (gameState === 'playing' && !paused && hitFreezeTimer <= 0) update(dt, timestamp);
         if (gameState === 'dying') updateDying(dt);
         if (gameState === 'menu' || gameState === 'gameover') updateAttractMode(dt);
         updateNebulae(dt);
@@ -852,7 +877,8 @@
             waveBreakTimer += dt;
             if (waveBreakTimer >= waveBreakDuration) {
                 waveBreak = false; waveBreakTimer = 0; waveTimer = 0; wave++;
-                waveAnnounce = `WAVE ${wave}`; waveAnnounceTimer = 1.5;
+                const waveHints = wave >= 5 ? '⚠ Snipers active' : wave >= 3 ? '⚠ Burst enemies' : '';
+                waveAnnounce = `WAVE ${wave}`; waveAnnounceTimer = 1.8;
                 waveKills = 0; waveGrazes = 0; waveBreakStats = null;
                 playSound(600, 0.2, 'square', 0.08);
                 setTimeout(() => playSound(800, 0.2, 'square', 0.08), 100);
@@ -884,6 +910,7 @@
         // Kill streak timer
         if (killStreakTimer > 0) { killStreakTimer -= dt; if (killStreakTimer <= 0) killStreak = 0; }
         if (killStreakAnnounceTimer > 0) killStreakAnnounceTimer -= dt;
+        if (comboAnnounceTimer > 0) { comboAnnounceTimer -= dt; comboAnnounceScale = Math.max(1, comboAnnounceScale - dt * 2); }
 
         // Beat pulse decay
         if (beatPulse > 0) beatPulse = Math.max(0, beatPulse - dt * 5);
@@ -956,15 +983,28 @@
                 score += o.value;
                 o.life = 0;
                 playOrbCollectSound();
-                particles.push({ x: o.x, y: o.y - 8, vx: 0, vy: -50, life: 0.6, decay: 0.03, size: 0, color: '#ffdd00', text: `+${o.value}` });
-                for (let si = 0; si < 3; si++) {
+                // Orb chain tracking
+                orbChainCount++; orbChainTimer = 0.5;
+                const chainBonus = orbChainCount >= 5 ? 3 : orbChainCount >= 3 ? 2 : 1;
+                const orbText = orbChainCount >= 3 ? `+${o.value}x${chainBonus}` : `+${o.value}`;
+                if (chainBonus > 1) score += o.value * (chainBonus - 1); // bonus score
+                particles.push({ x: o.x, y: o.y - 8, vx: 0, vy: -50, life: 0.6, decay: 0.03, size: 0, color: orbChainCount >= 5 ? '#ff8800' : '#ffdd00', text: orbText });
+                const sparkCount = 3 + (orbChainCount >= 3 ? 4 : 0);
+                for (let si = 0; si < sparkCount; si++) {
                     const sa = Math.random() * Math.PI * 2;
-                    particles.push({ x: o.x, y: o.y, vx: Math.cos(sa)*60, vy: Math.sin(sa)*60, life: 0.3, decay: 0.04, size: 2, color: '#ffdd00' });
+                    const sspd = orbChainCount >= 3 ? 120 : 60;
+                    particles.push({ x: o.x, y: o.y, vx: Math.cos(sa)*sspd, vy: Math.sin(sa)*sspd, life: 0.3 + (orbChainCount >= 3 ? 0.2 : 0), decay: 0.04, size: 2, color: orbChainCount >= 5 ? '#ff8800' : '#ffdd00' });
+                }
+                if (orbChainCount === 5) {
+                    spawnFloatingText(player.x, player.y - 30, '⚡ ORB CHAIN!', '#ff8800', 20, 1.2);
+                    shakeAmount = Math.max(shakeAmount, 3);
                 }
             }
         });
         scoreOrbs = scoreOrbs.filter(o => o.life > 0);
         if (scoreOrbs.length > 50) scoreOrbs.splice(0, scoreOrbs.length - 50);
+        // Orb chain timer
+        if (orbChainTimer > 0) { orbChainTimer -= dt; } else { orbChainCount = 0; }
         updateParticles(dt);
         updateStars(dt);
         checkCollisions();
@@ -1273,6 +1313,15 @@
                 e.grazed = true; grazeCount++; waveGrazes++; comboCount++; comboTimer = 2;
                 if (comboCount > comboBest) comboBest = comboCount;
                 playGrazeStreakSound(comboCount);
+                // Hit freeze — brief pause for game feel (scales with combo)
+                hitFreezeTimer = Math.min(0.06, 0.03 + comboCount * 0.003);
+                // Combo announcement
+                const cAnn = getComboAnnouncement(comboCount);
+                if (cAnn) {
+                    comboAnnounce = cAnn.text; comboAnnounceTimer = 1.5; comboAnnounceColor = cAnn.color; comboAnnounceScale = 1.5;
+                    playSound(cAnn.sound, 0.12, 'square', 0.1);
+                    shakeAmount = Math.max(shakeAmount, 3 + comboCount * 0.5);
+                }
                 // Near-death bullet time — very close grazes trigger micro slow-mo
                 const closeness = dist - (player.radius + e.radius);
                 if (closeness < 8) {
@@ -1726,12 +1775,20 @@
         });
         ctx.globalAlpha = 1;
 
-        // Wave announcement
+        // Wave announcement with enemy preview hint
         if (waveAnnounceTimer > 0 && gameState === 'playing') {
             ctx.save(); ctx.globalAlpha = Math.min(1, waveAnnounceTimer);
             ctx.font = 'bold 64px Courier New'; ctx.textAlign = 'center';
             ctx.fillStyle = '#00ff88'; ctx.shadowBlur = 30; ctx.shadowColor = '#00ff88';
-            ctx.fillText(waveAnnounce, WIDTH/2, HEIGHT/2); ctx.restore();
+            ctx.fillText(waveAnnounce, WIDTH/2, HEIGHT/2);
+            // Wave enemy hint
+            const tier = getDifficultyTier(wave);
+            if (waveAnnounce.startsWith('WAVE') && wave > 1) {
+                ctx.font = '16px Courier New'; ctx.fillStyle = tier.color; ctx.globalAlpha *= 0.7;
+                const hint = wave >= 5 ? '⚠ Snipers active' : wave >= 3 ? '⚠ Burst enemies incoming' : 'Stay sharp!';
+                ctx.fillText(hint, WIDTH/2, HEIGHT/2 + 35);
+            }
+            ctx.restore();
         }
 
         // Wave break stats + countdown bar
@@ -1760,6 +1817,40 @@
             ctx.font = `bold ${Math.floor(36 * scale)}px Courier New`; ctx.textAlign = 'center';
             ctx.fillStyle = '#ff8800'; ctx.shadowBlur = 20; ctx.shadowColor = '#ff8800';
             ctx.fillText(killStreakAnnounce, WIDTH/2, HEIGHT/2 + 60); ctx.restore();
+        }
+
+        // Combo graze announcement (fighting game style)
+        if (comboAnnounceTimer > 0 && gameState === 'playing') {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, comboAnnounceTimer * 1.5);
+            const cSize = Math.floor(42 * comboAnnounceScale);
+            ctx.font = `bold ${cSize}px Courier New`; ctx.textAlign = 'center';
+            ctx.fillStyle = comboAnnounceColor;
+            ctx.shadowBlur = 25; ctx.shadowColor = comboAnnounceColor;
+            ctx.fillText(comboAnnounce, WIDTH/2, HEIGHT * 0.3);
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        // Wave progress bar — thin bar at top of screen
+        if (isActive && !waveBreak) {
+            const barY = 2, barH = 3;
+            const pct = Math.min(1, waveTimer / waveDuration);
+            const tier = getDifficultyTier(wave);
+            // Background track
+            ctx.fillStyle = 'rgba(255,255,255,0.06)';
+            ctx.fillRect(0, barY, WIDTH, barH);
+            // Progress fill with tier color
+            ctx.fillStyle = tier.color;
+            ctx.globalAlpha = 0.5 + Math.sin(gameTime * 3) * 0.1;
+            ctx.fillRect(0, barY, WIDTH * pct, barH);
+            // Glow at leading edge
+            if (pct > 0.01) {
+                ctx.shadowBlur = 8; ctx.shadowColor = tier.color;
+                ctx.fillRect(WIDTH * pct - 4, barY, 4, barH);
+                ctx.shadowBlur = 0;
+            }
+            ctx.globalAlpha = 1;
         }
 
         // CRT scanline overlay (cached offscreen canvas)
