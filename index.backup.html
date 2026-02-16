@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v54 🥈 Iteration #54</title>
+    <title>NEON SURVIVE — Self-Improving Game v55 🥈 Iteration #55</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -155,24 +155,24 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #54 🥈</div><div>Grade: 99/100</div></div>
+        <div class="hud-right"><div>Iteration #55 🥈</div><div>Grade: 99/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v54 🥈 Silver Milestone!</div>
+        <div class="subtitle">Self-Improving Game v56 🥈 Silver Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
             MOUSE / WASD / ARROW KEYS / TOUCH<br>
-            SPACE / DOUBLE-TAP to DASH<br>
+            SPACE / DOUBLE-TAP to DASH | F / THREE-TAP to BLAST<br>
             Dodge enemies. Graze for bonus points. Collect power-ups. Survive.
         </div>
         <button class="start-btn" id="dailyBtn" style="margin-top:12px;font-size:16px;padding:8px 20px;background:rgba(255,221,0,0.08);border-color:#ffdd00;color:#ffdd00;text-shadow:0 0 10px #ffdd00;" onclick="startDailyChallenge()">🎯 DAILY CHALLENGE</button>
         <div id="dailyInfo" style="font-size:12px;opacity:0.7;margin-top:6px;color:#ffdd00;text-align:center;line-height:1.5;"></div>
         <button class="start-btn" style="margin-top:12px;font-size:16px;padding:8px 20px;opacity:0.7" onclick="openSettings()">⚙ SETTINGS</button>
-        <div style="margin-top:15px;font-size:28px;animation:pulse 2s infinite;text-shadow:0 0 20px #c0c0c0,0 0 40px #c0c0c0;color:#c0c0c0;">🥈 SILVER MILESTONE — 54 Iterations!</div>
-        <div style="margin-top:8px;font-size:14px;opacity:0.7;color:#ffd700;animation:pulse 3s infinite;">🥇 Gold at 100 — <span style="color:#fff;font-weight:bold;">48 iterations to go!</span></div>
+        <div style="margin-top:15px;font-size:28px;animation:pulse 2s infinite;text-shadow:0 0 20px #c0c0c0,0 0 40px #c0c0c0;color:#c0c0c0;">🥈 SILVER MILESTONE — 55 Iterations!</div>
+        <div style="margin-top:8px;font-size:14px;opacity:0.7;color:#ffd700;animation:pulse 3s infinite;">🥇 Gold at 100 — <span style="color:#fff;font-weight:bold;">45 iterations to go!</span></div>
         <div id="pilotRank" style="margin-top:20px;font-size:14px;text-align:center;line-height:1.6;"></div>
         <div id="lifetimeStats" style="margin-top:10px;font-size:12px;opacity:0.5;text-align:center;line-height:1.8;"></div>
         <div id="achievementCount" style="margin-top:8px;font-size:12px;opacity:0.6;color:#ffdd00;text-align:center;"></div>
@@ -206,11 +206,11 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #54</strong> 🥈 <em>Silver Milestone!</em> Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #55</strong> 🥈 <em>Silver Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #54 🥈 | Grade: 99/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #55 🥈 | Grade: 99/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
@@ -641,8 +641,8 @@
         { id: 'shield', icon: '🛡', name: 'Barrier', desc: 'Shield for 6 seconds', apply: () => { activePowerups.shield = Math.max(activePowerups.shield, 6); } },
         { id: 'magnet', icon: '🧲', name: 'Magnetism', desc: 'Attract orbs for 8s', apply: () => { activePowerups.magnet = Math.max(activePowerups.magnet, 8); } },
         { id: 'score_mult', icon: '💎', name: 'Jackpot', desc: 'Score x2 for 10s', apply: () => { scoreMult = Math.min(MULT_MAX, scoreMult + 1); } },
-        { id: 'tiny', icon: '🔬', name: 'Shrink', desc: 'Smaller hitbox for 8s', apply: () => { player.radius *= 0.7; setTimeout(() => { player.radius /= 0.7; }, 8000); } },
-        { id: 'graze_range', icon: '🌀', name: 'Aura', desc: 'Wider graze zone for 10s', apply: () => { grazeExpand = 1.5; setTimeout(() => { grazeExpand = 1; }, 10000); } },
+        { id: 'tiny', icon: '🔬', name: 'Shrink', desc: 'Smaller hitbox for 8s', apply: () => { activePowerups.tiny = Math.max(activePowerups.tiny||0, 8); if(!player.shrunk){player.shrunk=true; player.radius *= 0.7;} } },
+        { id: 'graze_range', icon: '🌀', name: 'Aura', desc: 'Wider graze zone for 10s', apply: () => { activePowerups.aura = Math.max(activePowerups.aura||0, 10); grazeExpand = 1.5; } },
         { id: 'dash_reset', icon: '💨', name: 'Quick Dash', desc: 'Instant dash cooldown reset', apply: () => { player.dashCooldown = 0; } },
         { id: 'slow_enemies', icon: '🕐', name: 'Time Warp', desc: 'Enemies slowed 30% for 8s', apply: () => { activePowerups.slowmo = Math.max(activePowerups.slowmo, 8); } },
         { id: 'heal_combo', icon: '🔥', name: 'Hot Streak', desc: 'Start with 5x combo', apply: () => { comboCount = Math.max(comboCount, 5); comboTimer = 3; } },
@@ -1161,16 +1161,24 @@
         window.addEventListener('keydown', e => {
             keys[e.key.toLowerCase()] = true;
             if (e.key === ' ' && gameState === 'playing' && !paused) { e.preventDefault(); tryDash(); }
+            if (e.key === 'f' && gameState === 'playing' && !paused) { e.preventDefault(); tryGrazeBlast(); }
             if ((e.key === 'p' || e.key === 'Escape') && gameState === 'playing') { e.preventDefault(); togglePause(); }
             if ((e.key === 'Enter' || e.key === ' ' || e.key === 'r') && gameState === 'gameover') { e.preventDefault(); startGame(); }
         });
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
         canvas.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.active = true; });
+        let tapCount = 0, tapResetTimer = null;
         canvas.addEventListener('touchstart', e => {
             handleTouch(e);
             const now = Date.now();
-            if (now - lastTapTime < 300) tryDash();
+            if (now - lastTapTime < 300) {
+                tapCount++;
+                if (tapCount >= 3) { tryGrazeBlast(); tapCount = 0; }
+                else if (tapCount === 2) { tryDash(); }
+            } else { tapCount = 1; }
             lastTapTime = now;
+            clearTimeout(tapResetTimer);
+            tapResetTimer = setTimeout(() => tapCount = 0, 400);
         });
         canvas.addEventListener('touchmove', handleTouch);
         canvas.addEventListener('touchend', () => touch.active = false);
@@ -1218,6 +1226,72 @@
     }
 
     // ============================================
+    // GRAZE BLAST — spend combo to push/destroy enemies
+    // ============================================
+    let blastRings = []; // visual shockwave rings
+    const BLAST_MIN_COMBO = 5;
+    const BLAST_RADIUS_BASE = 180;
+    const BLAST_PUSH_FORCE = 600;
+
+    function tryGrazeBlast() {
+        if (comboCount < BLAST_MIN_COMBO) return;
+        const power = comboCount;
+        const radius = BLAST_RADIUS_BASE + power * 8;
+        // Consume ALL combo
+        const consumed = comboCount;
+        comboCount = 0; comboTimer = 0;
+        // Push/destroy enemies
+        let kills = 0;
+        enemies.forEach(e => {
+            const dx = e.x - player.x, dy = e.y - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < radius) {
+                const pushStr = BLAST_PUSH_FORCE * (1 - dist / radius) * (1 + power * 0.1);
+                const nx = dist > 0 ? dx / dist : 0, ny = dist > 0 ? dy / dist : 0;
+                // Small enemies (radius <= 6) get destroyed
+                if (e.radius <= 6 && dist < radius * 0.6) {
+                    e.x = -9999; // mark for removal
+                    kills++;
+                    score += Math.floor(25 * scoreMult);
+                    for (let i = 0; i < 4; i++) {
+                        const a = Math.random() * Math.PI * 2;
+                        particles.push({ x: e.x, y: e.y, vx: Math.cos(a)*150, vy: Math.sin(a)*150, life: 0.4, decay: 0.03, size: 2, color: '#00ffff' });
+                    }
+                } else {
+                    e.vx += nx * pushStr;
+                    e.vy += ny * pushStr;
+                }
+            }
+        });
+        // Remove destroyed enemies
+        compactInPlace(enemies, e => e.x > -9000);
+        killCount += kills;
+        // Also push score orbs toward player
+        scoreOrbs.forEach(o => {
+            const dx = o.x - player.x, dy = o.y - player.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < radius) {
+                const pull = -300 * (1 - dist / radius);
+                const nx = dist > 0 ? dx / dist : 0, ny = dist > 0 ? dy / dist : 0;
+                o.vx += nx * pull; o.vy += ny * pull;
+            }
+        });
+        // Visual + audio feedback
+        blastRings.push({ x: player.x, y: player.y, radius: 0, maxRadius: radius, life: 0.6, power: consumed, color: consumed >= 15 ? '#ff00ff' : consumed >= 10 ? '#ffaa00' : '#00ffff' });
+        shakeAmount = 8 + power * 0.5;
+        flashColor = consumed >= 15 ? '#ff00ff' : '#00ffff';
+        flashAlpha = 0.3;
+        hitFreezeTimer = 0.08;
+        // Sound — ascending tone burst
+        playSound(300 + consumed * 40, 0.15, 'sawtooth', 0.15);
+        setTimeout(() => playSound(500 + consumed * 40, 0.1, 'sine', 0.1), 50);
+        // Floating text
+        const blastLabel = consumed >= 15 ? '💥 MEGA BLAST!' : consumed >= 10 ? '⚡ GRAZE BLAST!' : '✦ BLAST!';
+        spawnFloatingText(player.x, player.y - 40, blastLabel, consumed >= 15 ? '#ff00ff' : '#00ffff', 24, 1.5);
+        if (kills > 0) spawnFloatingText(player.x, player.y - 65, `+${kills} kills`, '#ffdd00', 16, 1.0);
+    }
+
+    // ============================================
     // GAME CONTROL
     // ============================================
     function togglePause() {
@@ -1247,10 +1321,12 @@
         paused = false; newHighScore = false; document.getElementById('pauseOverlay').classList.remove('show');
         document.getElementById('pauseBtn').style.display = 'block';
         dash.active = false; dash.timer = 0; dash.cooldown = 0; dash.invincible = false;
+        blastRings = [];
         laserBarriers = [];
         grazeExpand = 1; perkChoiceActive = false;
         document.getElementById('perkChoice').classList.remove('show');
-        activePowerups = { shield: 0, slowmo: 0, magnet: 0 };
+        activePowerups = { shield: 0, slowmo: 0, magnet: 0, tiny: 0, aura: 0 };
+        player.shrunk = false;
         sessionPowerupsCollected = {}; sessionBossKilled = false; sessionDashKill = false; achievementToasts = [];
         waveAnnounce = 'WAVE 1'; waveAnnounceTimer = 1.5;
         document.getElementById('menu').classList.add('hidden');
@@ -1662,6 +1738,10 @@
 
         // Power-up timers
         for (const k in activePowerups) { if (activePowerups[k] > 0) activePowerups[k] -= dt; }
+        // Expire shrink powerup
+        if (player.shrunk && (activePowerups.tiny||0) <= 0) { player.radius /= 0.7; player.shrunk = false; }
+        // Expire aura powerup
+        if (grazeExpand > 1 && (activePowerups.aura||0) <= 0) { grazeExpand = 1; }
 
         // Score multiplier update
         if (scoreMultDecayTimer > 0) { scoreMultDecayTimer -= dt; }
@@ -2146,6 +2226,9 @@
         // Cap particles to prevent memory issues during intense gameplay
         const maxParticles = settings.particles ? 200 : 50;
         if (particles.length > maxParticles) particles.splice(0, particles.length - maxParticles);
+        // Blast rings
+        blastRings.forEach(br => br.life -= dt);
+        compactInPlace(blastRings, br => br.life > 0);
     }
 
     // === ENVIRONMENT ATMOSPHERE SYSTEM ===
@@ -3010,6 +3093,23 @@
             } else {
                 ctx.fillRect(p.x - p.size/2, p.y - p.size/2, p.size, p.size);
             }
+        });
+        ctx.globalAlpha = 1;
+
+        // Blast rings
+        blastRings.forEach(br => {
+            const progress = 1 - br.life / 0.6;
+            const r = br.maxRadius * progress;
+            ctx.globalAlpha = br.life * 1.5;
+            ctx.strokeStyle = br.color;
+            ctx.lineWidth = 4 * (1 - progress) + 1;
+            ctx.shadowBlur = 15; ctx.shadowColor = br.color;
+            ctx.beginPath(); ctx.arc(br.x, br.y, r, 0, Math.PI * 2); ctx.stroke();
+            // Inner ring
+            ctx.globalAlpha = br.life * 0.5;
+            ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(br.x, br.y, r * 0.7, 0, Math.PI * 2); ctx.stroke();
+            ctx.shadowBlur = 0;
         });
         ctx.globalAlpha = 1;
 
