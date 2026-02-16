@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v43 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v44 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -132,7 +132,7 @@
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v43 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v44 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -820,6 +820,19 @@
     }
 
     // Wall spark sound
+    function playVortexSound() {
+        if (!audioCtx || muted) return;
+        // Deep warping drone
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(80, audioCtx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 0.8);
+        g.gain.setValueAtTime(0.08 * masterVolume, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(); o.stop(audioCtx.currentTime + 1);
+    }
+
     function playWallSparkSound() {
         if (!audioCtx || muted) return;
         const osc = audioCtx.createOscillator();
@@ -1018,7 +1031,7 @@
         document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊';
         gameState = 'playing'; score = 0; grazeCount = 0; gameTime = 0; difficulty = 1; orbChainCount = 0; orbChainTimer = 0; hitFreezeTimer = 0;
         player.x = WIDTH / 2; player.y = HEIGHT / 2; player.vx = 0; player.vy = 0; player.trail = [];
-        enemies = []; particles = []; powerups = []; scoreOrbs = []; boss = null;
+        enemies = []; particles = []; powerups = []; scoreOrbs = []; boss = null; gravityWells = [];
         lastSpawn = 0; lastPowerupSpawn = 0;
         wave = 1; waveTimer = 0; waveBreak = false; waveBreakTimer = 0;
         comboCount = 0; comboTimer = 0; comboBest = 0; killCount = 0; killStreak = 0; killStreakTimer = 0;
@@ -1175,10 +1188,13 @@
     // ============================================
     // POWER-UPS
     // ============================================
+    // Gravity Well system — vortex power-up creates a black hole that pulls enemies
+    let gravityWells = [];
+
     function spawnPowerup() {
-        const types = ['shield', 'slowmo', 'magnet'];
-        const colors = { shield: '#00aaff', slowmo: '#ff00ff', magnet: '#ffff00' };
-        const symbols = { shield: '🛡', slowmo: '⏳', magnet: '🧲' };
+        const types = ['shield', 'slowmo', 'magnet', 'vortex'];
+        const colors = { shield: '#00aaff', slowmo: '#ff00ff', magnet: '#ffff00', vortex: '#aa00ff' };
+        const symbols = { shield: '🛡', slowmo: '⏳', magnet: '🧲', vortex: '🌀' };
         const type = types[Math.floor(Math.random() * types.length)];
         powerups.push({
             x: Math.random() * (WIDTH - 100) + 50,
@@ -1189,7 +1205,13 @@
     }
 
     function collectPowerup(p) {
-        activePowerups[p.type] = p.type === 'shield' ? 5 : p.type === 'slowmo' ? 4 : 6;
+        if (p.type === 'vortex') {
+            // Spawn a gravity well at collection point
+            gravityWells.push({ x: p.x, y: p.y, life: 4, maxLife: 4, radius: 0, maxRadius: 180, pull: 400, angle: 0 });
+            playVortexSound();
+        } else {
+            activePowerups[p.type] = p.type === 'shield' ? 5 : p.type === 'slowmo' ? 4 : 6;
+        }
         sessionPowerupsCollected[p.type] = true;
         playPowerupSound();
         flashColor = p.color; flashAlpha = 0.2;
@@ -1368,6 +1390,45 @@
                 spawnLaserBarrier();
             }
         }
+
+        // Gravity wells update
+        gravityWells.forEach(gw => {
+            gw.life -= dt;
+            gw.angle += dt * 3;
+            gw.radius = gw.maxRadius * Math.min(1, (gw.maxLife - gw.life) * 4); // expand quickly
+            const fade = gw.life / gw.maxLife;
+            // Pull enemies toward center
+            enemies.forEach(e => {
+                const dx = gw.x - e.x, dy = gw.y - e.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < gw.radius && dist > 5) {
+                    const strength = gw.pull * fade * (1 - dist / gw.radius);
+                    e.vx += (dx/dist) * strength * dt;
+                    e.vy += (dy/dist) * strength * dt;
+                }
+            });
+            // Pull boss too (weaker)
+            if (boss) {
+                const dx = gw.x - boss.x, dy = gw.y - boss.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist < gw.radius && dist > 5) {
+                    const strength = gw.pull * fade * 0.3 * (1 - dist / gw.radius);
+                    boss.x += (dx/dist) * strength * dt;
+                    boss.y += (dy/dist) * strength * dt;
+                }
+            }
+            // Ambient particles — spiral inward
+            if (settings.particles && Math.random() < 0.4) {
+                const a = Math.random() * Math.PI * 2;
+                const r = gw.radius * (0.5 + Math.random() * 0.5);
+                particles.push({
+                    x: gw.x + Math.cos(a) * r, y: gw.y + Math.sin(a) * r,
+                    vx: (gw.x - (gw.x + Math.cos(a)*r)) * 2, vy: (gw.y - (gw.y + Math.sin(a)*r)) * 2,
+                    life: 0.5, decay: 0.04, size: 1.5, color: '#aa00ff'
+                });
+            }
+        });
+        compactInPlace(gravityWells, gw => gw.life > 0);
 
         // Beat pulse decay
         if (beatPulse > 0) beatPulse = Math.max(0, beatPulse - dt * 5);
@@ -2246,6 +2307,38 @@
                 ctx.stroke();
             });
             ctx.globalAlpha = 1;
+
+            // Gravity wells
+            gravityWells.forEach(gw => {
+                const fade = gw.life / gw.maxLife;
+                const r = gw.radius;
+                ctx.save();
+                // Outer ring
+                ctx.strokeStyle = `rgba(170,0,255,${fade * 0.4})`;
+                ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(gw.x, gw.y, r, 0, Math.PI * 2); ctx.stroke();
+                // Spiral arms
+                ctx.strokeStyle = `rgba(170,0,255,${fade * 0.6})`;
+                ctx.lineWidth = 1.5;
+                for (let arm = 0; arm < 3; arm++) {
+                    ctx.beginPath();
+                    const baseA = gw.angle + (Math.PI * 2 / 3) * arm;
+                    for (let t = 0; t < 1; t += 0.02) {
+                        const a = baseA + t * Math.PI * 2;
+                        const sr = r * t;
+                        const px = gw.x + Math.cos(a) * sr, py = gw.y + Math.sin(a) * sr;
+                        t === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+                    }
+                    ctx.stroke();
+                }
+                // Core glow
+                const grad = ctx.createRadialGradient(gw.x, gw.y, 0, gw.x, gw.y, 30);
+                grad.addColorStop(0, `rgba(170,0,255,${fade * 0.8})`);
+                grad.addColorStop(1, 'rgba(170,0,255,0)');
+                ctx.fillStyle = grad;
+                ctx.beginPath(); ctx.arc(gw.x, gw.y, 30, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            });
 
             // Laser barriers
             laserBarriers.forEach(lb => {

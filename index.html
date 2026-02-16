@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v44 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v45 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -100,6 +100,34 @@
             cursor: pointer; transition: all 0.2s;
         }
         .settings-close:hover { background: #00ff88; color: #000; }
+        #perkChoice {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: none; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 90; pointer-events: all;
+        }
+        #perkChoice.show { display: flex; }
+        .perk-title { font-size: 28px; color: #ffdd00; text-shadow: 0 0 20px #ffdd00; margin-bottom: 25px; }
+        .perk-cards { display: flex; gap: 20px; }
+        .perk-card {
+            width: 180px; padding: 20px 15px; background: rgba(0,255,136,0.05);
+            border: 2px solid rgba(0,255,136,0.3); cursor: pointer; text-align: center;
+            transition: all 0.2s; position: relative; overflow: hidden;
+        }
+        .perk-card:hover, .perk-card:active {
+            border-color: #00ff88; background: rgba(0,255,136,0.15);
+            box-shadow: 0 0 25px rgba(0,255,136,0.3); transform: translateY(-4px);
+        }
+        .perk-icon { font-size: 36px; margin-bottom: 10px; }
+        .perk-name { font-size: 16px; font-weight: bold; color: #00ff88; margin-bottom: 6px; }
+        .perk-desc { font-size: 12px; opacity: 0.7; line-height: 1.4; }
+        @media (max-width: 420px) {
+            .perk-cards { gap: 12px; }
+            .perk-card { width: 140px; padding: 15px 10px; }
+            .perk-icon { font-size: 28px; }
+            .perk-name { font-size: 14px; }
+            .perk-desc { font-size: 11px; }
+            .perk-title { font-size: 22px; }
+        }
         @media (max-width: 768px) {
             .title { font-size: 42px; }
             .game-over-title { font-size: 42px; }
@@ -127,12 +155,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #42 🥉</div><div>Grade: 96/100</div></div>
+        <div class="hud-right"><div>Iteration #44 🥉</div><div>Grade: 97/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v44 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v45 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -160,6 +188,10 @@
         <button class="start-btn" id="restartBtn">PLAY AGAIN</button>
         <div style="margin-top:12px;font-size:12px;opacity:0.4;">Press R / ENTER / SPACE to retry</div>
     </div>
+    <div id="perkChoice">
+        <div class="perk-title">⬆ CHOOSE A PERK</div>
+        <div class="perk-cards" id="perkCards"></div>
+    </div>
     <div id="settingsPanel">
         <h2>⚙ SETTINGS</h2>
         <div class="setting-row"><label>CRT Scanlines</label><div class="setting-toggle on" id="toggleCRT" onclick="toggleSetting('crt')"></div></div>
@@ -171,11 +203,11 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #42</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #44</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #42 🥉 | Grade: 96/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #44 🥉 | Grade: 97/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
@@ -522,6 +554,59 @@
     function updateAchievementToasts(dt) {
         achievementToasts.forEach(t => t.timer -= dt);
         compactInPlace(achievementToasts, t => t.timer > 0);
+    }
+
+    // ============================================
+    // PERK CHOICE SYSTEM — Roguelite wave rewards
+    // ============================================
+    const PERKS = [
+        { id: 'speed', icon: '⚡', name: 'Swift', desc: '+15% move speed (stacks)', apply: () => { player.speed *= 1.15; } },
+        { id: 'shield', icon: '🛡', name: 'Barrier', desc: 'Shield for 6 seconds', apply: () => { activePowerups.shield = Math.max(activePowerups.shield, 6); } },
+        { id: 'magnet', icon: '🧲', name: 'Magnetism', desc: 'Attract orbs for 8s', apply: () => { activePowerups.magnet = Math.max(activePowerups.magnet, 8); } },
+        { id: 'score_mult', icon: '💎', name: 'Jackpot', desc: 'Score x2 for 10s', apply: () => { scoreMult = Math.min(MULT_MAX, scoreMult + 1); } },
+        { id: 'tiny', icon: '🔬', name: 'Shrink', desc: 'Smaller hitbox for 8s', apply: () => { player.radius *= 0.7; setTimeout(() => { player.radius /= 0.7; }, 8000); } },
+        { id: 'graze_range', icon: '🌀', name: 'Aura', desc: 'Wider graze zone for 10s', apply: () => { grazeExpand = 1.5; setTimeout(() => { grazeExpand = 1; }, 10000); } },
+        { id: 'dash_reset', icon: '💨', name: 'Quick Dash', desc: 'Instant dash cooldown reset', apply: () => { player.dashCooldown = 0; } },
+        { id: 'slow_enemies', icon: '🕐', name: 'Time Warp', desc: 'Enemies slowed 30% for 8s', apply: () => { activePowerups.slowmo = Math.max(activePowerups.slowmo, 8); } },
+        { id: 'heal_combo', icon: '🔥', name: 'Hot Streak', desc: 'Start with 5x combo', apply: () => { comboCount = Math.max(comboCount, 5); comboTimer = 3; } },
+        { id: 'orb_shower', icon: '✨', name: 'Orb Rain', desc: 'Spawn 8 bonus score orbs', apply: () => { for(let i=0;i<8;i++) scoreOrbs.push({ x:Math.random()*WIDTH, y:Math.random()*HEIGHT, vx:(Math.random()-0.5)*60, vy:(Math.random()-0.5)*60, life:6, value:50+wave*10 }); } },
+    ];
+    let grazeExpand = 1; // multiplier for graze detection radius
+    let perkChoiceActive = false;
+    let perkWaveThreshold = 2; // offer perks every 2 waves starting wave 2
+
+    function offerPerkChoice() {
+        perkChoiceActive = true;
+        paused = true;
+        const available = PERKS.slice();
+        // Pick 2 random distinct perks
+        const idx1 = Math.floor(Math.random() * available.length);
+        const p1 = available.splice(idx1, 1)[0];
+        const idx2 = Math.floor(Math.random() * available.length);
+        const p2 = available[idx2];
+        const container = document.getElementById('perkCards');
+        container.innerHTML = '';
+        [p1, p2].forEach(perk => {
+            const card = document.createElement('div');
+            card.className = 'perk-card';
+            card.innerHTML = `<div class="perk-icon">${perk.icon}</div><div class="perk-name">${perk.name}</div><div class="perk-desc">${perk.desc}</div>`;
+            card.onclick = () => selectPerk(perk);
+            card.ontouchend = (e) => { e.preventDefault(); selectPerk(perk); };
+            container.appendChild(card);
+        });
+        document.getElementById('perkChoice').classList.add('show');
+    }
+
+    function selectPerk(perk) {
+        perk.apply();
+        perkChoiceActive = false;
+        paused = false;
+        document.getElementById('perkChoice').classList.remove('show');
+        // Feedback
+        spawnFloatingText(WIDTH/2, HEIGHT/2, `${perk.icon} ${perk.name}!`, '#ffdd00', 20, 2);
+        flashColor = '#ffdd00'; flashAlpha = 0.25;
+        playSound(880, 0.15, 'sine', 0.1);
+        setTimeout(() => playSound(1320, 0.15, 'sine', 0.08), 80);
     }
 
     // Dash afterimages
@@ -1040,6 +1125,8 @@
         document.getElementById('pauseBtn').style.display = 'block';
         dash.active = false; dash.timer = 0; dash.cooldown = 0; dash.invincible = false;
         laserBarriers = [];
+        grazeExpand = 1; perkChoiceActive = false;
+        document.getElementById('perkChoice').classList.remove('show');
         activePowerups = { shield: 0, slowmo: 0, magnet: 0 };
         sessionPowerupsCollected = {}; sessionBossKilled = false; sessionDashKill = false; achievementToasts = [];
         waveAnnounce = 'WAVE 1'; waveAnnounceTimer = 1.5;
@@ -1051,6 +1138,8 @@
 
     function endGame() {
         gameState = 'dying'; deathSlowmo = deathSlowmoDuration;
+        perkChoiceActive = false; paused = false;
+        document.getElementById('perkChoice').classList.remove('show');
         shakeAmount = 25;
         // Death ring
         rings.push({ x: player.x, y: player.y, radius: 5, maxRadius: Math.max(WIDTH, HEIGHT) * 0.8, speed: 300, life: 1, color: '#ff0044', width: 4 });
@@ -1285,28 +1374,9 @@
                 updateBassDrone(wave);
                 // Boss every 5 waves
                 if (wave % 5 === 0 && !boss) { setTimeout(() => { if (gameState === 'playing') spawnBoss(wave); }, 1500); }
-                // Wave milestone rewards — every 3 waves, grant a brief power boost
-                if (wave > 1 && (wave - 1) % 3 === 0) {
-                    const rewards = [
-                        { name: '⚡ SURGE', desc: 'Speed boost!', effect: () => { player.speed *= 1.3; setTimeout(() => { player.speed /= 1.3; }, 5000); } },
-                        { name: '🛡 FORTIFY', desc: 'Brief shield!', effect: () => { activePowerups.shield = Math.max(activePowerups.shield, 4); } },
-                        { name: '💎 JACKPOT', desc: 'Score x3!', effect: () => { scoreMult = Math.min(MULT_MAX, scoreMult + 2); } },
-                    ];
-                    const reward = rewards[Math.floor(Math.random() * rewards.length)];
-                    reward.effect();
-                    waveAnnounce = `WAVE ${wave} — ${reward.name}`; waveAnnounceTimer = 2.5;
-                    flashColor = '#ffdd00'; flashAlpha = 0.3;
-                    // Rising victory chime
-                    if (!muted && audioCtx) {
-                        [660, 880, 1100].forEach((f, i) => setTimeout(() => playSound(f, 0.15, 'sine', 0.08), i * 60));
-                    }
-                    // Celebratory particle burst from center
-                    if (settings.particles) {
-                        for (let i = 0; i < 24; i++) {
-                            const a = (Math.PI * 2 / 24) * i, sp = 150 + Math.random() * 100;
-                            particles.push({ x: WIDTH/2, y: HEIGHT/2, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 1, decay: 0.02, size: 3 + Math.random()*3, color: '#ffdd00' });
-                        }
-                    }
+                // Perk choice — every 2 waves starting wave 2
+                if (wave > 1 && wave % perkWaveThreshold === 0) {
+                    setTimeout(() => { if (gameState === 'playing' && !perkChoiceActive) offerPerkChoice(); }, 800);
                 }
             }
         } else if (waveTimer >= waveDuration) {
@@ -2027,7 +2097,7 @@
                 }
             }
             // Graze
-            const grazeDist = player.radius + e.radius + 25;
+            const grazeDist = (player.radius + e.radius + 25) * grazeExpand;
             if (!e.grazed && dist < grazeDist && dist > player.radius + e.radius) {
                 e.grazed = true; grazeCount++; waveGrazes++; comboCount++; comboTimer = 2;
                 // Score multiplier boost
