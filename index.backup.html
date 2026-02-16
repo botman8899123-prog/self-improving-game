@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v42 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v43 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -132,7 +132,7 @@
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v42 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v43 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -1480,6 +1480,7 @@
         if (orbChainTimer > 0) { orbChainTimer -= dt; } else { orbChainCount = 0; }
         updateParticles(dt);
         updateStars(dt);
+        updateEnvironment(dt);
         // Boss update
         if (boss) {
             boss.pulse += dt * 3;
@@ -1810,6 +1811,76 @@
         if (particles.length > maxParticles) particles.splice(0, particles.length - maxParticles);
     }
 
+    // === ENVIRONMENT ATMOSPHERE SYSTEM ===
+    // Wave-dependent weather: aurora bands + lightning on high waves
+    let envLightning = { active: false, timer: 0, alpha: 0, nextStrike: 3 + Math.random() * 5 };
+    let auroraPhase = 0;
+
+    function updateEnvironment(dt) {
+        auroraPhase += dt * 0.4;
+        // Lightning system — triggers on wave 7+ with dramatic flash + sound
+        if (wave >= 7 && gameState === 'playing') {
+            envLightning.nextStrike -= dt;
+            if (envLightning.nextStrike <= 0) {
+                envLightning.active = true;
+                envLightning.timer = 0.35;
+                envLightning.alpha = 0.5 + Math.random() * 0.3;
+                envLightning.nextStrike = 4 + Math.random() * 8 - Math.min(wave * 0.3, 3);
+                // Thunder sound — low rumble
+                if (audioCtx && !muted) {
+                    const noise = audioCtx.createOscillator();
+                    const g = audioCtx.createGain();
+                    noise.type = 'sawtooth';
+                    noise.frequency.setValueAtTime(60, audioCtx.currentTime);
+                    noise.frequency.exponentialRampToValueAtTime(20, audioCtx.currentTime + 0.4);
+                    g.gain.setValueAtTime(0.06 * masterVolume, audioCtx.currentTime);
+                    g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.5);
+                    noise.connect(g); g.connect(audioCtx.destination);
+                    noise.start(); noise.stop(audioCtx.currentTime + 0.5);
+                }
+            }
+            if (envLightning.timer > 0) envLightning.timer -= dt;
+        }
+    }
+
+    function renderAurora() {
+        if (gameState !== 'playing' && gameState !== 'dying') return;
+        // Aurora bands — wave-colored sine waves across the top third
+        const bands = Math.min(3, 1 + Math.floor(wave / 3));
+        const baseHue = ((wave - 1) * 40) % 360;
+        ctx.save();
+        for (let b = 0; b < bands; b++) {
+            const yBase = HEIGHT * (0.08 + b * 0.07);
+            const hue = (baseHue + b * 60) % 360;
+            const amp = 15 + Math.sin(auroraPhase * 0.7 + b) * 8;
+            const alpha = 0.025 + flowZoneIntensity * 0.02;
+            ctx.beginPath();
+            ctx.moveTo(0, yBase);
+            for (let x = 0; x <= WIDTH; x += 8) {
+                const y = yBase + Math.sin(x * 0.008 + auroraPhase + b * 1.5) * amp
+                    + Math.sin(x * 0.003 - auroraPhase * 0.6) * amp * 0.5;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(WIDTH, 0);
+            ctx.lineTo(0, 0);
+            ctx.closePath();
+            ctx.fillStyle = `hsla(${hue}, 80%, 55%, ${alpha})`;
+            ctx.fill();
+        }
+        ctx.restore();
+
+        // Lightning flash overlay
+        if (envLightning.timer > 0) {
+            const t = envLightning.timer / 0.35;
+            // Double-flash pattern (realistic lightning)
+            const flash = t > 0.7 ? (t - 0.7) / 0.3 : t < 0.3 ? t / 0.3 * 0.4 : 0;
+            if (flash > 0) {
+                ctx.fillStyle = `rgba(180,200,255,${flash * envLightning.alpha * 0.15})`;
+                ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            }
+        }
+    }
+
     function updateStars(dt) {
         stars.forEach(s => {
             s.y += s.speed;
@@ -2004,6 +2075,9 @@
 
         // Nebula clouds
         renderNebulae();
+
+        // Aurora atmosphere
+        renderAurora();
 
         // Attract mode enemies (menu/gameover background)
         if (gameState === 'menu' || gameState === 'gameover') renderAttractMode();
