@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v35 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v36 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -127,12 +127,12 @@
     <canvas id="gameCanvas"></canvas>
     <div class="overlay">
         <div class="hud"><div id="scoreDisplay">TIME: 0.0s | GRAZE: 0</div></div>
-        <div class="hud-right"><div>Iteration #35 🥉</div><div>Grade: 93/100</div></div>
+        <div class="hud-right"><div>Iteration #36 🥉</div><div>Grade: 94/100</div></div>
         <div class="hud-bottom" id="powerupHud"></div>
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v35 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v36 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -170,11 +170,11 @@
     <div class="info-section">
         <h2>About This Game</h2>
         <p>This is a <strong>self-improving autonomous game</strong>. Every 7 minutes, an AI agent evaluates the current version, grades it, and automatically generates improvements. The game evolves itself over time.</p>
-        <p style="margin-top:10px;">You are playing <strong>Iteration #35</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
+        <p style="margin-top:10px;">You are playing <strong>Iteration #36</strong> 🥉 <em>Bronze Milestone!</em> Check back regularly to see how it transforms itself.</p>
         <p style="margin-top:10px;"><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ffff;">🕰️ Explore the Time Machine</a> — browse every version and see the evolution history.</p>
     </div>
     <div class="footer">
-        Iteration #35 🥉 | Grade: 93/100 | Last Updated: <span id="timestamp"></span>
+        Iteration #36 🥉 | Grade: 94/100 | Last Updated: <span id="timestamp"></span>
         <br><a href="https://game.theselfimprovingpage.com" target="_blank" style="color:#00ff88;opacity:0.7;text-decoration:underline;">🕰️ Time Machine — See how this game evolved</a>
     </div>
     <script>
@@ -1615,11 +1615,41 @@
                     else if (killStreak === 5) { killStreakAnnounce = 'RAMPAGE!'; killStreakAnnounceTimer = 1.2; playSound(1200, 0.2, 'square', 0.12); }
                     else if (killStreak >= 8) { killStreakAnnounce = 'UNSTOPPABLE!'; killStreakAnnounceTimer = 1.5; playSound(1500, 0.25, 'square', 0.15); }
                     shakeAmount = 10;
-                    // Ring burst
-                    for (let i = 0; i < 16; i++) {
-                        const a = (Math.PI * 2 / 16) * i;
-                        const sp = 180 + Math.random() * 80;
-                        particles.push({ x: e.x, y: e.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 0.7, decay: 0.02, size: 2 + Math.random()*3, color: e.color });
+                    // Type-specific death effects
+                    if (e.type === 'burst') {
+                        // Starburst: 3 rings expanding outward
+                        for (let ring = 0; ring < 3; ring++) {
+                            for (let i = 0; i < 8; i++) {
+                                const a = (Math.PI * 2 / 8) * i + ring * 0.3;
+                                const sp = 120 + ring * 80;
+                                particles.push({ x: e.x, y: e.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 0.8, decay: 0.018, size: 3 + Math.random()*2, color: ['#ff00ff','#ff44aa','#ff88cc'][ring] });
+                            }
+                        }
+                    } else if (e.type === 'homing') {
+                        // Spiral outward
+                        for (let i = 0; i < 20; i++) {
+                            const a = (Math.PI * 2 / 20) * i;
+                            const sp = 100 + i * 15;
+                            const spin = a + i * 0.4;
+                            particles.push({ x: e.x, y: e.y, vx: Math.cos(spin)*sp, vy: Math.sin(spin)*sp, life: 0.9, decay: 0.018, size: 2 + Math.random()*2, color: i % 2 ? '#ffaa00' : '#ffdd44' });
+                        }
+                    } else if (e.type === 'sniper') {
+                        // Laser flash — lines radiating out
+                        for (let i = 0; i < 6; i++) {
+                            const a = (Math.PI / 3) * i;
+                            for (let j = 0; j < 4; j++) {
+                                const sp = 150 + j * 60;
+                                particles.push({ x: e.x, y: e.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 0.5, decay: 0.025, size: 1.5, color: '#ff4444' });
+                            }
+                        }
+                        flashColor = '#ff2222'; flashAlpha = 0.15;
+                    } else {
+                        // Default ring burst for basic enemies
+                        for (let i = 0; i < 16; i++) {
+                            const a = (Math.PI * 2 / 16) * i;
+                            const sp = 180 + Math.random() * 80;
+                            particles.push({ x: e.x, y: e.y, vx: Math.cos(a)*sp, vy: Math.sin(a)*sp, life: 0.7, decay: 0.02, size: 2 + Math.random()*3, color: e.color });
+                        }
                     }
                     // Center flash
                     particles.push({ x: e.x, y: e.y, vx: 0, vy: 0, life: 0.4, decay: 0.04, size: e.radius * 3, color: '#fff' });
@@ -1822,6 +1852,32 @@
                 ctx.shadowBlur = 30; ctx.shadowColor = '#ff4400';
                 ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 15 + edgeProx * 10, 0, Math.PI * 2); ctx.fill();
                 ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+            }
+
+            // Combo timer ring — shows remaining time to chain next graze
+            if (comboCount > 0 && comboTimer > 0) {
+                const comboRingRadius = player.radius + 20;
+                const comboFrac = comboTimer / 2; // 2s max
+                const comboArc = comboFrac * Math.PI * 2;
+                const comboRingColor = comboCount >= 10 ? '#ff00ff' : comboCount >= 5 ? '#ffaa00' : '#00ffff';
+                const ringAlpha = 0.3 + comboFrac * 0.5;
+                // Background ring (dark)
+                ctx.beginPath(); ctx.arc(player.x, player.y, comboRingRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = `rgba(255,255,255,0.06)`; ctx.lineWidth = 3; ctx.stroke();
+                // Active ring (draining clockwise from top)
+                ctx.beginPath(); ctx.arc(player.x, player.y, comboRingRadius, -Math.PI/2, -Math.PI/2 + comboArc);
+                ctx.strokeStyle = comboRingColor; ctx.lineWidth = 3; ctx.globalAlpha = ringAlpha;
+                ctx.shadowBlur = 8; ctx.shadowColor = comboRingColor; ctx.stroke();
+                ctx.shadowBlur = 0; ctx.globalAlpha = 1;
+                // Combo count indicator at ring tip
+                if (comboCount > 1) {
+                    const tipAngle = -Math.PI/2 + comboArc;
+                    const tipX = player.x + Math.cos(tipAngle) * comboRingRadius;
+                    const tipY = player.y + Math.sin(tipAngle) * comboRingRadius;
+                    ctx.fillStyle = comboRingColor; ctx.globalAlpha = ringAlpha;
+                    ctx.beginPath(); ctx.arc(tipX, tipY, 4, 0, Math.PI * 2); ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
             }
 
             // Player (rotating triangle)
