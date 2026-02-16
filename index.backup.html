@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v37 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v38 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -132,7 +132,7 @@
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v37 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v38 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -144,6 +144,7 @@
         <div style="margin-top:15px;font-size:28px;animation:pulse 2s infinite;text-shadow:0 0 20px #cd7f32,0 0 40px #cd7f32;">🥉 BRONZE MILESTONE — 25 Iterations!</div>
         <div id="pilotRank" style="margin-top:20px;font-size:14px;text-align:center;line-height:1.6;"></div>
         <div id="lifetimeStats" style="margin-top:10px;font-size:12px;opacity:0.5;text-align:center;line-height:1.8;"></div>
+        <div id="achievementCount" style="margin-top:8px;font-size:12px;opacity:0.6;color:#ffdd00;text-align:center;"></div>
     </div>
     <button id="pauseBtn" onclick="togglePause()">❚❚ PAUSE</button>
     <button id="muteBtn" onclick="toggleMute()" style="position:fixed;top:20px;right:120px;font-family:'Courier New',monospace;font-size:18px;background:transparent;color:#00ff88;border:1px solid rgba(0,255,136,0.3);padding:5px 10px;cursor:pointer;z-index:50;display:none;opacity:0.5;transition:opacity 0.2s;">🔊</button>
@@ -179,7 +180,7 @@
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 37 (Edge Awareness + Rank Reveal + Wave Bar)
+    // NEON SURVIVE — Iteration 38 (Achievements System)
     // ============================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d', { alpha: false });
@@ -382,6 +383,112 @@
         if (level >= 7) return 'ICE RUNNER';
         if (level >= 4) return 'LIME STREAK';
         return 'NEON PILOT';
+    }
+
+    // ============================================
+    // ACHIEVEMENTS SYSTEM
+    // ============================================
+    const ACHIEVEMENTS = [
+        { id: 'first_graze', name: 'Close Shave', desc: 'Get your first graze', icon: '✨', check: (s) => s.grazeCount >= 1 },
+        { id: 'graze_10', name: 'Thrill Seeker', desc: 'Graze 10 enemies in one game', icon: '💫', check: (s) => s.grazeCount >= 10 },
+        { id: 'graze_50', name: 'Death Dancer', desc: 'Graze 50 enemies in one game', icon: '🌟', check: (s) => s.grazeCount >= 50 },
+        { id: 'combo_5', name: 'Combo Starter', desc: 'Reach a 5x graze combo', icon: '🔥', check: (s) => s.comboBest >= 5 },
+        { id: 'combo_10', name: 'Combo Master', desc: 'Reach a 10x graze combo', icon: '⚡', check: (s) => s.comboBest >= 10 },
+        { id: 'combo_20', name: 'Combo Legend', desc: 'Reach a 20x graze combo', icon: '👑', check: (s) => s.comboBest >= 20 },
+        { id: 'wave_3', name: 'Warming Up', desc: 'Survive to wave 3', icon: '🌊', check: (s) => s.wave >= 3 },
+        { id: 'wave_5', name: 'Proven Pilot', desc: 'Survive to wave 5', icon: '🛸', check: (s) => s.wave >= 5 },
+        { id: 'wave_10', name: 'Elite Survivor', desc: 'Survive to wave 10', icon: '🏆', check: (s) => s.wave >= 10 },
+        { id: 'kill_boss', name: 'Boss Slayer', desc: 'Defeat a boss', icon: '💀', check: (s) => s.bossKilled },
+        { id: 'kill_10', name: 'Hunter', desc: 'Kill 10 enemies in one game', icon: '🎯', check: (s) => s.killCount >= 10 },
+        { id: 'score_1000', name: 'Four Digits', desc: 'Score 1,000 points', icon: '📊', check: (s) => s.score >= 1000 },
+        { id: 'score_5000', name: 'High Roller', desc: 'Score 5,000 points', icon: '💎', check: (s) => s.score >= 5000 },
+        { id: 'dash_kill', name: 'Dash Strike', desc: 'Kill an enemy by dashing', icon: '💨', check: (s) => s.dashKill },
+        { id: 'survive_60', name: 'Minute Man', desc: 'Survive 60 seconds', icon: '⏱', check: (s) => s.gameTime >= 60 },
+        { id: 'survive_180', name: 'Endurance', desc: 'Survive 3 minutes', icon: '🕐', check: (s) => s.gameTime >= 180 },
+        { id: 'level_5', name: 'Rank Up', desc: 'Reach pilot level 5', icon: '🎖', check: (s) => s.level >= 5 },
+        { id: 'level_10', name: 'Veteran', desc: 'Reach pilot level 10', icon: '🏅', check: (s) => s.level >= 10 },
+        { id: 'games_10', name: 'Dedicated', desc: 'Play 10 games', icon: '🎮', check: (s) => s.totalGames >= 10 },
+        { id: 'powerup_all', name: 'Fully Loaded', desc: 'Collect all 3 power-up types in one game', icon: '🧪', check: (s) => s.powerupsCollected && s.powerupsCollected.shield && s.powerupsCollected.slowmo && s.powerupsCollected.magnet },
+    ];
+    let unlockedAchievements = JSON.parse(localStorage.getItem('neonSurviveAchievements') || '[]');
+    let achievementToasts = [];
+    let sessionPowerupsCollected = {};
+    let sessionBossKilled = false;
+    let sessionDashKill = false;
+
+    function checkAchievements() {
+        const state = {
+            grazeCount, comboBest, wave, killCount, score, gameTime,
+            bossKilled: sessionBossKilled, dashKill: sessionDashKill,
+            level: xpData.level, totalGames: lifetime.games,
+            powerupsCollected: sessionPowerupsCollected
+        };
+        let newUnlocks = 0;
+        ACHIEVEMENTS.forEach(a => {
+            if (unlockedAchievements.includes(a.id)) return;
+            if (a.check(state)) {
+                unlockedAchievements.push(a.id);
+                newUnlocks++;
+                // Queue toast
+                achievementToasts.push({ icon: a.icon, name: a.name, desc: a.desc, timer: 3.5, fadeIn: 0 });
+                // Play achievement sound
+                if (!muted && audioCtx) {
+                    playSound(880, 0.1, 'sine', 0.08);
+                    setTimeout(() => playSound(1100, 0.1, 'sine', 0.08), 80);
+                    setTimeout(() => playSound(1320, 0.15, 'sine', 0.1), 160);
+                }
+            }
+        });
+        if (newUnlocks > 0) localStorage.setItem('neonSurviveAchievements', JSON.stringify(unlockedAchievements));
+    }
+
+    function renderAchievementToasts(ctx) {
+        const toastH = 50, toastW = 260, padding = 10, startY = 70;
+        achievementToasts.forEach((t, i) => {
+            t.fadeIn = Math.min(1, t.fadeIn + 0.05);
+            const alpha = t.timer > 0.5 ? t.fadeIn : t.timer * 2;
+            const y = startY + i * (toastH + 8);
+            const x = WIDTH - toastW - padding;
+            ctx.save();
+            ctx.globalAlpha = alpha * 0.9;
+            // Background
+            ctx.fillStyle = 'rgba(0,0,0,0.85)';
+            ctx.strokeStyle = '#ffdd00';
+            ctx.lineWidth = 1.5;
+            const r = 8;
+            ctx.beginPath();
+            ctx.moveTo(x + r, y); ctx.lineTo(x + toastW - r, y);
+            ctx.arcTo(x + toastW, y, x + toastW, y + r, r);
+            ctx.lineTo(x + toastW, y + toastH - r);
+            ctx.arcTo(x + toastW, y + toastH, x + toastW - r, y + toastH, r);
+            ctx.lineTo(x + r, y + toastH);
+            ctx.arcTo(x, y + toastH, x, y + toastH - r, r);
+            ctx.lineTo(x, y + r);
+            ctx.arcTo(x, y, x + r, y, r);
+            ctx.closePath();
+            ctx.fill(); ctx.stroke();
+            // Gold glow
+            ctx.shadowColor = '#ffdd00'; ctx.shadowBlur = 10;
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+            // Icon
+            ctx.font = '22px serif';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(t.icon, x + 12, y + 33);
+            // Text
+            ctx.font = 'bold 13px "Courier New", monospace';
+            ctx.fillStyle = '#ffdd00';
+            ctx.fillText(t.name, x + 42, y + 20);
+            ctx.font = '11px "Courier New", monospace';
+            ctx.fillStyle = 'rgba(255,255,255,0.7)';
+            ctx.fillText(t.desc, x + 42, y + 37);
+            ctx.restore();
+        });
+    }
+
+    function updateAchievementToasts(dt) {
+        achievementToasts.forEach(t => t.timer -= dt);
+        achievementToasts = achievementToasts.filter(t => t.timer > 0);
     }
 
     // Dash afterimages
@@ -887,6 +994,7 @@
         document.getElementById('pauseBtn').style.display = 'block';
         dash.active = false; dash.timer = 0; dash.cooldown = 0; dash.invincible = false;
         activePowerups = { shield: 0, slowmo: 0, magnet: 0 };
+        sessionPowerupsCollected = {}; sessionBossKilled = false; sessionDashKill = false; achievementToasts = [];
         waveAnnounce = 'WAVE 1'; waveAnnounceTimer = 1.5;
         document.getElementById('menu').classList.add('hidden');
         document.getElementById('gameOver').classList.remove('show');
@@ -932,7 +1040,12 @@
         addXP(xpEarned);
     }
 
+    function updateAchievementDisplay() {
+        const el = document.getElementById('achievementCount');
+        if (el) el.innerHTML = unlockedAchievements.length > 0 ? `🏆 ${unlockedAchievements.length}/${ACHIEVEMENTS.length} Achievements` : '';
+    }
     function updateLifetimeDisplay() {
+        updateAchievementDisplay();
         const el = document.getElementById('lifetimeStats');
         if (el && lifetime.games > 0) {
             el.innerHTML = `GAMES: ${lifetime.games} | BEST WAVE: ${lifetime.bestWave} | KILLS: ${lifetime.totalKills} | GRAZES: ${lifetime.totalGrazes} | BEST COMBO: x${lifetime.bestCombo}`;
@@ -954,6 +1067,7 @@
     }
 
     function finalizeDeath() {
+        checkAchievements();
         gameState = 'gameover'; stopBeat(); stopBassDrone(); stopArp();
         document.getElementById('pauseBtn').style.display = 'none';
         document.body.style.overflow = '';
@@ -1042,6 +1156,7 @@
 
     function collectPowerup(p) {
         activePowerups[p.type] = p.type === 'shield' ? 5 : p.type === 'slowmo' ? 4 : 6;
+        sessionPowerupsCollected[p.type] = true;
         playPowerupSound();
         flashColor = p.color; flashAlpha = 0.2;
         // Pickup particles
@@ -1083,6 +1198,8 @@
         const timeMult = (activePowerups.slowmo > 0 ? 0.5 : 1) * btMult;
         const eDt = dt * timeMult; // Enemy delta time (slowed)
         gameTime += dt;
+        // Periodic achievement check (every 5s for time-based)
+        if (Math.floor(gameTime) % 5 === 0 && Math.floor(gameTime) !== Math.floor(gameTime - dt)) checkAchievements();
 
         // Wave system
         waveTimer += dt;
@@ -1090,6 +1207,7 @@
             waveBreakTimer += dt;
             if (waveBreakTimer >= waveBreakDuration) {
                 waveBreak = false; waveBreakTimer = 0; waveTimer = 0; wave++;
+                checkAchievements();
                 const waveHints = wave >= 5 ? '⚠ Snipers active' : wave >= 3 ? '⚠ Burst enemies' : '';
                 waveAnnounce = `WAVE ${wave}`; waveAnnounceTimer = 1.8;
                 waveKills = 0; waveGrazes = 0; waveBreakStats = null;
@@ -1352,6 +1470,7 @@
                         playSound(800, 0.3, 'sine', 0.15);
                         setTimeout(() => playSound(1200, 0.2, 'sine', 0.12), 100);
                         setTimeout(() => playSound(1600, 0.15, 'sine', 0.1), 200);
+                        sessionBossKilled = true; checkAchievements();
                         boss = null;
                     }
                 } else {
@@ -1365,6 +1484,9 @@
         floatingTexts.forEach(ft => { ft.x += ft.vx * dt; ft.y += ft.vy * dt; ft.duration -= dt; });
         floatingTexts = floatingTexts.filter(ft => ft.duration > 0);
         if (floatingTexts.length > 20) floatingTexts.splice(0, floatingTexts.length - 20);
+
+        // Achievement toasts
+        updateAchievementToasts(dt);
 
         // Edge warnings
         edgeWarnings.forEach(w => w.life -= dt * 2);
@@ -1641,6 +1763,7 @@
                 if (dash.invincible || activePowerups.shield > 0) {
                     // Destroy enemy — satisfying explosion
                     e.life = 0; killCount++; waveKills++;
+                    if (dash.invincible) sessionDashKill = true;
                     killStreak++; killStreakTimer = 1.5;
                     scoreMultTarget = Math.min(MULT_MAX, scoreMultTarget + 0.25); scoreMultDecayTimer = MULT_DECAY_DELAY; scoreMultPulse = 0.5;
                     if (killStreak === 3) { killStreakAnnounce = 'TRIPLE KILL!'; killStreakAnnounceTimer = 1.2; playSound(1000, 0.15, 'square', 0.1); }
@@ -1708,6 +1831,7 @@
                 // Score multiplier boost
                 scoreMultTarget = Math.min(MULT_MAX, scoreMultTarget + 0.15); scoreMultDecayTimer = MULT_DECAY_DELAY; scoreMultPulse = 0.5;
                 if (comboCount > comboBest) comboBest = comboCount;
+                checkAchievements();
                 playGrazeStreakSound(comboCount);
                 // Hit freeze — brief pause for game feel (scales with combo)
                 hitFreezeTimer = Math.min(0.06, 0.03 + comboCount * 0.003);
@@ -2214,6 +2338,9 @@
             ctx.shadowBlur = 0;
         });
         ctx.globalAlpha = 1;
+
+        // Achievement toasts
+        renderAchievementToasts(ctx);
 
         // Screen flash
         if (flashAlpha > 0) {
