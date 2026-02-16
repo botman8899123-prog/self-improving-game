@@ -180,8 +180,16 @@
     </div>
     <script>
     // ============================================
-    // NEON SURVIVE — Iteration 38 (Achievements System)
+    // NEON SURVIVE — Iteration 40 (Performance Audit)
     // ============================================
+    // In-place array compaction — avoids GC from .filter() in hot paths
+    function compactInPlace(arr, predicate) {
+        let write = 0;
+        for (let i = 0; i < arr.length; i++) {
+            if (predicate(arr[i])) { arr[write++] = arr[i]; }
+        }
+        arr.length = write;
+    }
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d', { alpha: false });
     let WIDTH, HEIGHT;
@@ -488,7 +496,7 @@
 
     function updateAchievementToasts(dt) {
         achievementToasts.forEach(t => t.timer -= dt);
-        achievementToasts = achievementToasts.filter(t => t.timer > 0);
+        compactInPlace(achievementToasts, t => t.timer > 0);
     }
 
     // Dash afterimages
@@ -568,7 +576,7 @@
             if (e.trail.length > 6) e.trail.shift();
             e.trail.forEach(t => t.life -= 0.15);
         });
-        attractEnemies = attractEnemies.filter(e => e.x > -50 && e.x < WIDTH+50 && e.y > -50 && e.y < HEIGHT+50);
+        compactInPlace(attractEnemies, e => e.x > -50 && e.x < WIDTH+50 && e.y > -50 && e.y < HEIGHT+50);
     }
     function renderAttractMode() {
         attractEnemies.forEach(e => {
@@ -1187,7 +1195,7 @@
         updateNebulae(dt);
         // Update rings always
         rings.forEach(r => { r.radius += r.speed * dt; r.life -= dt / (r.maxRadius / r.speed); });
-        rings = rings.filter(r => r.life > 0 && r.radius < r.maxRadius);
+        compactInPlace(rings, r => r.life > 0 && r.radius < r.maxRadius);
         render();
     }
 
@@ -1405,7 +1413,7 @@
                 }
             }
         });
-        scoreOrbs = scoreOrbs.filter(o => o.life > 0);
+        compactInPlace(scoreOrbs, o => o.life > 0);
         if (scoreOrbs.length > 50) scoreOrbs.splice(0, scoreOrbs.length - 50);
         // Orb chain timer
         if (orbChainTimer > 0) { orbChainTimer -= dt; } else { orbChainCount = 0; }
@@ -1482,7 +1490,7 @@
 
         // Floating texts update
         floatingTexts.forEach(ft => { ft.x += ft.vx * dt; ft.y += ft.vy * dt; ft.duration -= dt; });
-        floatingTexts = floatingTexts.filter(ft => ft.duration > 0);
+        compactInPlace(floatingTexts, ft => ft.duration > 0);
         if (floatingTexts.length > 20) floatingTexts.splice(0, floatingTexts.length - 20);
 
         // Achievement toasts
@@ -1490,11 +1498,11 @@
 
         // Edge warnings
         edgeWarnings.forEach(w => w.life -= dt * 2);
-        edgeWarnings = edgeWarnings.filter(w => w.life > 0);
+        compactInPlace(edgeWarnings, w => w.life > 0);
 
         // Speed lines update
         speedLines.forEach(l => l.life -= l.decay);
-        speedLines = speedLines.filter(l => l.life > 0);
+        compactInPlace(speedLines, l => l.life > 0);
         if (dash.active) spawnSpeedLines();
 
         // Proximity heartbeat — find closest enemy, beat faster when near
@@ -1525,7 +1533,7 @@
             });
         }
         dashAfterimages.forEach(a => a.life -= dt);
-        dashAfterimages = dashAfterimages.filter(a => a.life > 0);
+        compactInPlace(dashAfterimages, a => a.life > 0);
         if (dashAfterimages.length > 15) dashAfterimages.splice(0, dashAfterimages.length - 15);
 
         // Danger border pulse — intensifies with enemy count
@@ -1539,7 +1547,7 @@
         const slowFactor = 0.05 + 0.15 * (1 - deathSlowmo / deathSlowmoDuration);
         // Still update particles slowly for dramatic effect
         particles.forEach(p => { p.x += p.vx * dt * slowFactor; p.y += p.vy * dt * slowFactor; p.life -= p.decay * slowFactor; });
-        particles = particles.filter(p => p.life > 0);
+        compactInPlace(particles, p => p.life > 0);
         // Death shards — spin and drift
         deathShards.forEach(s => {
             s.x += s.vx * dt * slowFactor;
@@ -1548,7 +1556,7 @@
             s.life -= s.decay * slowFactor;
             s.vx *= 0.995; s.vy *= 0.995;
         });
-        deathShards = deathShards.filter(s => s.life > 0);
+        compactInPlace(deathShards, s => s.life > 0);
         // Enemies slow to crawl
         enemies.forEach(e => { e.x += e.vx * dt * slowFactor; e.y += e.vy * dt * slowFactor; });
         updateStars(dt * slowFactor);
@@ -1712,7 +1720,7 @@
             if (e.trail.length > 8) e.trail.shift();
             e.trail.forEach(t => t.life -= 0.12);
         });
-        enemies = enemies.filter(e => e.life !== 0 && e.x > -100 && e.x < WIDTH+100 && e.y > -100 && e.y < HEIGHT+100);
+        compactInPlace(enemies, e => e.life !== 0 && e.x > -100 && e.x < WIDTH+100 && e.y > -100 && e.y < HEIGHT+100);
         enemies.push(...toAdd);
     }
 
@@ -1729,12 +1737,12 @@
                 }
             }
         });
-        powerups = powerups.filter(p => p.life > 0);
+        compactInPlace(powerups, p => p.life > 0);
     }
 
     function updateParticles(dt) {
         particles.forEach(p => { p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= 0.98; p.vy *= 0.98; p.life -= p.decay; });
-        particles = particles.filter(p => p.life > 0);
+        compactInPlace(particles, p => p.life > 0);
         // Cap particles to prevent memory issues during intense gameplay
         const maxParticles = settings.particles ? 200 : 50;
         if (particles.length > maxParticles) particles.splice(0, particles.length - maxParticles);
@@ -1865,7 +1873,7 @@
                 particles.push({ x: mx, y: my-10, vx: 0, vy: -80, life: 0.8, decay: 0.025, size: 0, color: comboCount>3?'#ffff00':'#00ffff', text: comboCount>1?`x${comboCount}`:'+50' });
             }
         });
-        enemies = enemies.filter(e => e.life !== 0);
+        compactInPlace(enemies, e => e.life !== 0);
 
         // Power-up collisions (iterate backwards for safe splice)
         for (let i = powerups.length - 1; i >= 0; i--) {
