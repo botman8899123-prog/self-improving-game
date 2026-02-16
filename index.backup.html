@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NEON SURVIVE — Self-Improving Game v38 🥉</title>
+    <title>NEON SURVIVE — Self-Improving Game v40 🥉</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -132,7 +132,7 @@
     </div>
     <div id="menu">
         <div class="title">NEON SURVIVE</div>
-        <div class="subtitle">Self-Improving Game v38 🥉 Bronze Milestone!</div>
+        <div class="subtitle">Self-Improving Game v40 🥉 Bronze Milestone!</div>
         <div class="high-score" id="highScoreDisplay">HIGH SCORE: 0</div>
         <button class="start-btn" id="startBtn">START</button>
         <div class="controls">
@@ -2573,6 +2573,64 @@
                 ctx.fillRect(0, barY, WIDTH, barH);
             }
             ctx.globalAlpha = 1;
+        }
+
+        // Mini-map radar — bottom-left, shows enemy positions relative to player
+        if (isActive && enemies.length > 0) {
+            const radarR = 32, radarX = 46, radarY = HEIGHT - 46;
+            const radarRange = 600; // game units visible on radar
+            ctx.save();
+            // Radar background
+            ctx.globalAlpha = 0.25;
+            ctx.fillStyle = '#000';
+            ctx.beginPath(); ctx.arc(radarX, radarY, radarR + 2, 0, Math.PI * 2); ctx.fill();
+            ctx.globalAlpha = 0.35;
+            ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(radarX, radarY, radarR, 0, Math.PI * 2); ctx.stroke();
+            // Range rings
+            ctx.globalAlpha = 0.12; ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 0.5;
+            ctx.beginPath(); ctx.arc(radarX, radarY, radarR * 0.5, 0, Math.PI * 2); ctx.stroke();
+            // Sweep line (rotating)
+            const sweepAngle = gameTime * 2.5;
+            ctx.globalAlpha = 0.2; ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.moveTo(radarX, radarY);
+            ctx.lineTo(radarX + Math.cos(sweepAngle) * radarR, radarY + Math.sin(sweepAngle) * radarR);
+            ctx.stroke();
+            // Player dot (center)
+            ctx.globalAlpha = 0.9; ctx.fillStyle = '#00ff88';
+            ctx.beginPath(); ctx.arc(radarX, radarY, 2, 0, Math.PI * 2); ctx.fill();
+            // Enemy dots
+            enemies.forEach(e => {
+                const dx = (e.x - player.x) / radarRange * radarR;
+                const dy = (e.y - player.y) / radarRange * radarR;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > radarR - 2) return; // outside radar range
+                const dotAlpha = 0.8 - dist / radarR * 0.4;
+                ctx.globalAlpha = dotAlpha;
+                ctx.fillStyle = e.type === 'sniper' ? '#ff4444' : e.type === 'burst' ? '#ff00ff' : e.type === 'homing' ? '#ffaa00' : e.color;
+                const dotSize = e.type === 'sniper' || e.type === 'burst' ? 2.5 : 1.8;
+                ctx.beginPath(); ctx.arc(radarX + dx, radarY + dy, dotSize, 0, Math.PI * 2); ctx.fill();
+            });
+            // Boss dot (larger, pulsing)
+            if (boss) {
+                const bdx = (boss.x - player.x) / radarRange * radarR;
+                const bdy = (boss.y - player.y) / radarRange * radarR;
+                if (Math.sqrt(bdx*bdx + bdy*bdy) <= radarR) {
+                    ctx.globalAlpha = 0.9; ctx.fillStyle = '#ff2200';
+                    ctx.shadowBlur = 6; ctx.shadowColor = '#ff2200';
+                    ctx.beginPath(); ctx.arc(radarX + bdx, radarY + bdy, 3.5 + Math.sin(gameTime * 5) * 1, 0, Math.PI * 2); ctx.fill();
+                    ctx.shadowBlur = 0;
+                }
+            }
+            // Power-up dots
+            powerups.forEach(p => {
+                const pdx = (p.x - player.x) / radarRange * radarR;
+                const pdy = (p.y - player.y) / radarRange * radarR;
+                if (Math.sqrt(pdx*pdx + pdy*pdy) > radarR) return;
+                ctx.globalAlpha = 0.7; ctx.fillStyle = '#00ffcc';
+                ctx.beginPath(); ctx.arc(radarX + pdx, radarY + pdy, 2, 0, Math.PI * 2); ctx.fill();
+            });
+            ctx.restore();
         }
 
         // CRT scanline overlay (cached offscreen canvas)
